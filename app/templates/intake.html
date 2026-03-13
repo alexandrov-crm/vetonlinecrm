@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анкета перед приёмом</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #e0f2e9 0%, #f0f8ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .header .icon { font-size: 40px; }
+        .header h1 {
+            font-size: 22px;
+            color: #333;
+            margin-top: 10px;
+        }
+        .header p {
+            color: #888;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #555;
+            font-size: 14px;
+        }
+        .form-group label .required {
+            color: #e74c3c;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+            outline: none;
+            font-family: inherit;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: #4A90D9;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .file-upload {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .file-upload:hover {
+            border-color: #4A90D9;
+        }
+        .file-upload input {
+            display: none;
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(39,174,96,0.4);
+        }
+        .error {
+            background: #ffe0e0;
+            color: #d32f2f;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .success-screen {
+            text-align: center;
+            padding: 40px 20px;
+            display: none;
+        }
+        .success-screen .icon { font-size: 60px; }
+        .success-screen h2 { color: #27ae60; margin: 15px 0; }
+        .success-screen p { color: #666; }
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="icon">🐾</div>
+                <h1 id="formTitle">Анкета перед приёмом</h1>
+                <p id="formDescription">Заполните анкету для записи на консультацию</p>
+            </div>
+
+            <div id="errorMsg" class="error"></div>
+
+            <form id="intakeForm" onsubmit="submitForm(event)">
+                <div id="formFields"></div>
+                <button type="submit" class="btn">Отправить анкету</button>
+            </form>
+
+            <div id="successScreen" class="success-screen">
+                <div class="icon">✅</div>
+                <h2>Анкета отправлена!</h2>
+                <p>Спасибо! Врач получит ваши данные и свяжется с вами для подтверждения записи.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PUBLIC_LINK = '{{ public_link }}';
+        let formData = null;
+
+        async function loadForm() {
+            try {
+                const resp = await fetch(`/api/intake/public/${PUBLIC_LINK}`);
+                if (!resp.ok) {
+                    showError('Опросник не найден или деактивирован');
+                    return;
+                }
+                formData = await resp.json();
+                document.getElementById('formTitle').textContent = formData.title || 'Анкета';
+                if (formData.description) {
+                    document.getElementById('formDescription').textContent = formData.description;
+                }
+                renderFields(formData.fields);
+            } catch(err) {
+                showError('Ошибка загрузки формы');
+            }
+        }
+
+        function renderFields(fields) {
+            const container = document.getElementById('formFields');
+            container.innerHTML = '';
+
+            fields.forEach(field => {
+                const group = document.createElement('div');
+                group.className = 'form-group';
+
+                const label = document.createElement('label');
+                label.innerHTML = field.field_label +
+                    (field.is_required ? ' <span class="required">*</span>' : '');
+                group.appendChild(label);
+
+                let input;
+                if (field.field_type === 'textarea') {
+                    input = document.createElement('textarea');
+                    input.placeholder = `Введите ${field.field_label.toLowerCase()}`;
+                } else if (field.field_type === 'select') {
+                    input = document.createElement('select');
+                    const emptyOpt = document.createElement('option');
+                    emptyOpt.value = '';
+                    emptyOpt.textContent = 'Выберите...';
+                    input.appendChild(emptyOpt);
+                    try {
+                        const options = JSON.parse(field.options || '[]');
+                        options.forEach(opt => {
+                            const option = document.createElement('option');
+                            option.value = opt;
+                            option.textContent = opt;
+                            input.appendChild(option);
+                        });
+                    } catch(e) {}
+                } else if (field.field_type === 'file') {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'file-upload';
+                    wrapper.innerHTML = '📎 Нажмите для загрузки файлов';
+                    input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    wrapper.appendChild(input);
+                    wrapper.onclick = () => input.click();
+                    group.appendChild(wrapper);
+                    input.dataset.fieldName = field.field_name;
+                    container.appendChild(group);
+                    return;
+                } else {
+                    input = document.createElement('input');
+                    input.type = field.field_type === 'number' ? 'number' : 'text';
+                    input.placeholder = `Введите ${field.field_label.toLowerCase()}`;
+                }
+
+                input.dataset.fieldName = field.field_name;
+                input.required = field.is_required;
+                group.appendChild(input);
+                container.appendChild(group);
+            });
+        }
+
+        async function submitForm(e) {
+            e.preventDefault();
+            const form = document.getElementById('intakeForm');
+            form.classList.add('loading');
+
+            const answers = {};
+            form.querySelectorAll('input, textarea, select').forEach(el => {
+                if (el.dataset.fieldName) {
+                    answers[el.dataset.fieldName] = el.value;
+                }
+            });
+
+            try {
+                const resp = await fetch(`/api/intake/public/${PUBLIC_LINK}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ answers })
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    form.style.display = 'none';
+                    document.getElementById('successScreen').style.display = 'block';
+                } else {
+                    showError(data.detail || 'Ошибка отправки');
+                    form.classList.remove('loading');
+                }
+            } catch(err) {
+                showError('Ошибка соединения');
+                form.classList.remove('loading');
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        loadForm();
+    </script>
+</body>
+</html>
