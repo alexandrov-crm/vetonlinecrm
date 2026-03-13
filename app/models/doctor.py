@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from datetime import datetime
 from app.database import Base
 
 
@@ -16,10 +16,9 @@ class Doctor(Base):
     phone = Column(String, default="")
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Relationships — должны совпадать с back_populates во всех моделях
+    # Relationships
     owners = relationship("Owner", back_populates="doctor", cascade="all, delete-orphan")
     visits = relationship("Visit", back_populates="doctor", cascade="all, delete-orphan")
     calendar_slots = relationship("CalendarSlot", back_populates="doctor", cascade="all, delete-orphan")
