@@ -19,9 +19,14 @@ class Doctor(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # Relationships
+    # Relationships — должны совпадать с back_populates во всех моделях
     owners = relationship("Owner", back_populates="doctor", cascade="all, delete-orphan")
-    doctor_settings = relationship("DoctorSettings", back_populates="doctor", uselist=False)
+    visits = relationship("Visit", back_populates="doctor", cascade="all, delete-orphan")
     calendar_slots = relationship("CalendarSlot", back_populates="doctor", cascade="all, delete-orphan")
+    settings = relationship("DoctorSettings", back_populates="doctor", uselist=False)
     templates = relationship("Template", back_populates="doctor", cascade="all, delete-orphan")
+    template_categories = relationship("TemplateCategory", back_populates="doctor", cascade="all, delete-orphan")
     reminders = relationship("Reminder", back_populates="doctor", cascade="all, delete-orphan")
+    files = relationship("File", back_populates="doctor", cascade="all, delete-orphan")
+    questionnaires = relationship("Questionnaire", back_populates="doctor", cascade="all, delete-orphan")
+    visit_form_configs = relationship("VisitFormConfig", back_populates="doctor", cascade="all, delete-orphan")
