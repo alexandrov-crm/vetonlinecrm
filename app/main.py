@@ -1,24 +1,49 @@
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from contextlib import asynccontextmanager
+from sqlalchemy import select
 from app.config import settings
-from app.database import init_db
+from app.database import init_db, async_session
+from app.models.doctor import Doctor
+from app.services.auth_service import hash_password, decode_access_token
 from app.routers import auth, doctors, patients, visits, templates, calendar, reminders
 from app.routers import questionnaire, visit_form, intake, files, documents, dashboard
 from app.routers import settings as settings_router
 
 
+async def create_default_admin():
+    """Создаёт админа при первом запуске"""
+    async with async_session() as session:
+        result = await session.execute(select(Doctor).where(Doctor.is_admin == True))
+        admin = result.scalar_one_or_none()
+        if not admin:
+            admin = Doctor(
+                username="admin",
+                email="admin@vetcrm.com",
+                hashed_password=hash_password("admin123"),
+                full_name="Администратор",
+                specialization="",
+                phone="",
+                is_active=True,
+                is_admin=True
+            )
+            session.add(admin)
+            await session.commit()
+            print("✅ Админ создан: логин=admin, пароль=admin123")
+        else:
+            print("✅ Админ уже существует")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     await init_db()
+    await create_default_admin()
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     print(f"🚀 {settings.PROJECT_NAME} v{settings.VERSION} запущен!")
     yield
-    # Shutdown
     print("👋 Сервер остановлен")
 
 
@@ -62,11 +87,12 @@ app.include_router(settings_router.router)
 async def index(request: Request):
     token = request.cookies.get("access_token")
     if token:
-        from app.services.auth_service import decode_access_token
         payload = decode_access_token(token)
         if payload:
+            if payload.get("is_admin"):
+                return RedirectResponse(url="/admin/doctors", status_code=303)
             return jinja_templates.TemplateResponse("app.html", {"request": request})
-    return jinja_templates.TemplateResponse("login.html", {"request": request})
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -74,13 +100,35 @@ async def login_page(request: Request):
     return jinja_templates.TemplateResponse("login.html", {"request": request})
 
 
-@app.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request):
-    return jinja_templates.TemplateResponse("login.html", {"request": request, "mode": "register"})
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        return RedirectResponse(url="/login", status_code=303)
+    payload = decode_access_token(token)
+    if not payload:
+        return RedirectResponse(url="/login", status_code=303)
+    if payload.get("is_admin"):
+        return RedirectResponse(url="/admin/doctors", status_code=303)
+    return jinja_templates.TemplateResponse("app.html", {"request": request})
+
+
+@app.get("/admin/doctors", response_class=HTMLResponse)
+async def admin_doctors_page(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        return RedirectResponse(url="/login", status_code=303)
+    payload = decode_access_token(token)
+    if not payload or not payload.get("is_admin"):
+        return RedirectResponse(url="/login", status_code=303)
+    return jinja_templates.TemplateResponse("admin_doctors.html", {"request": request})
 
 
 @app.get("/app", response_class=HTMLResponse)
 async def app_page(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        return RedirectResponse(url="/login", status_code=303)
     return jinja_templates.TemplateResponse("app.html", {"request": request})
 
 
@@ -92,7 +140,6 @@ async def intake_page(request: Request, public_link: str):
     })
 
 
-# Health check
 @app.get("/health")
 async def health():
     return {"status": "ok", "project": settings.PROJECT_NAME, "version": settings.VERSION}
