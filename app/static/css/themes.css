@@ -1,0 +1,192 @@
+/* ============ LIGHT THEME (default) ============ */
+:root {
+    --bg-primary: #f0f2f5;
+    --bg-card: #ffffff;
+    --bg-sidebar: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    --text-primary: #333333;
+    --text-secondary: #888888;
+    --text-muted: #aaaaaa;
+    --border-color: #e0e0e0;
+    --accent-color: #4A90D9;
+    --accent-light: #e3f2fd;
+    --hover-bg: #f5f8ff;
+    --shadow: 0 2px 8px rgba(0,0,0,0.06);
+    --header-bg: #ffffff;
+    --input-bg: #ffffff;
+}
+
+/* ============ DARK THEME ============ */
+body.dark-theme {
+    --bg-primary: #1a1a2e;
+    --bg-card: #16213e;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-muted: #777777;
+    --border-color: #2a2a4a;
+    --accent-color: #5da3e8;
+    --accent-light: rgba(74,144,217,0.15);
+    --hover-bg: rgba(255,255,255,0.05);
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --header-bg: #16213e;
+    --input-bg: #1a1a3e;
+}
+
+body.dark-theme {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+body.dark-theme .main-content {
+    background: var(--bg-primary);
+}
+
+body.dark-theme .top-header {
+    background: var(--header-bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .stat-card,
+body.dark-theme .dash-card,
+body.dark-theme .data-card,
+body.dark-theme .pet-info-card,
+body.dark-theme .pet-tabs,
+body.dark-theme .categories-panel,
+body.dark-theme .settings-section,
+body.dark-theme .template-card {
+    background: var(--bg-card);
+    box-shadow: var(--shadow);
+    color: var(--text-primary);
+}
+
+body.dark-theme .page-header h1 {
+    color: var(--text-primary);
+}
+
+body.dark-theme .stat-label,
+body.dark-theme .data-card-info .subtitle,
+body.dark-theme .data-card-info .details {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .data-card-info .title,
+body.dark-theme .dash-card h3,
+body.dark-theme .settings-section h3 {
+    color: var(--text-primary);
+}
+
+body.dark-theme .form-group label {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .form-group input,
+body.dark-theme .form-group textarea,
+body.dark-theme .form-group select,
+body.dark-theme .search-box input,
+body.dark-theme .search-filter input,
+body.dark-theme .filters-bar select,
+body.dark-theme .filters-bar input,
+body.dark-theme .full-width-input {
+    background: var(--input-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+body.dark-theme .form-group input:focus,
+body.dark-theme .form-group textarea:focus,
+body.dark-theme .form-group select:focus {
+    border-color: var(--accent-color);
+}
+
+body.dark-theme .modal-content {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+body.dark-theme .modal-header {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-theme .modal-footer {
+    border-top-color: var(--border-color);
+}
+
+body.dark-theme .tabs-bar {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-theme .tab-btn {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .tab-btn.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+}
+
+body.dark-theme .data-card:hover {
+    box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+
+body.dark-theme .upcoming-item,
+body.dark-theme .reminder-item {
+    background: rgba(255,255,255,0.05);
+}
+
+body.dark-theme .search-results {
+    background: var(--bg-card);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+}
+
+body.dark-theme .search-result-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+body.dark-theme .search-result-item {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-theme .category-item:hover {
+    background: var(--accent-light);
+}
+
+body.dark-theme .category-item.active {
+    background: var(--accent-light);
+    color: var(--accent-color);
+}
+
+body.dark-theme .pet-info-card .info-row {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-theme .visit-header-info {
+    background: var(--accent-light);
+}
+
+body.dark-theme .template-selector-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+body.dark-theme .template-selector-item {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-theme .data-card-actions button:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+body.dark-theme .btn-secondary {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+body.dark-theme .header-user {
+    color: var(--text-secondary);
+}
+
+body.dark-theme .empty-text {
+    color: var(--text-muted);
+}
+
+body.dark-theme .mobile-menu-btn {
+    color: var(--text-primary);
+}
