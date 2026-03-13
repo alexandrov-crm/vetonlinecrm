@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VetOnlineCRM</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/themes.css">
+    <link rel="stylesheet" href="/static/css/calendar.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+</head>
+<body>
+    <div id="appContainer" class="app-layout">
+
+        <!-- ============ SIDEBAR ============ -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-logo">🐾</span>
+                <span class="sidebar-title">VetOnlineCRM</span>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Дашборд</span>
+                </a>
+                <a class="nav-item" data-page="patients" onclick="navigate('patients')">
+                    <span class="nav-icon">🐾</span>
+                    <span class="nav-text">Пациенты</span>
+                </a>
+                <a class="nav-item" data-page="calendar" onclick="navigate('calendar')">
+                    <span class="nav-icon">📅</span>
+                    <span class="nav-text">Календарь</span>
+                </a>
+                <a class="nav-item" data-page="visits" onclick="navigate('visits')">
+                    <span class="nav-icon">💊</span>
+                    <span class="nav-text">Приёмы</span>
+                </a>
+                <a class="nav-item" data-page="templates" onclick="navigate('templates')">
+                    <span class="nav-icon">📝</span>
+                    <span class="nav-text">Шаблоны</span>
+                </a>
+                <a class="nav-item" data-page="questionnaires" onclick="navigate('questionnaires')">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Опросники</span>
+                </a>
+                <a class="nav-item" data-page="reminders" onclick="navigate('reminders')">
+                    <span class="nav-icon">🔔</span>
+                    <span class="nav-text">Напоминания</span>
+                </a>
+                <a class="nav-item" data-page="settings" onclick="navigate('settings')">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">Настройки</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <span id="userName" class="user-name">Врач</span>
+                </div>
+                <button class="btn-logout" onclick="logout()">🚪 Выход</button>
+            </div>
+        </aside>
+
+        <!-- ============ MAIN CONTENT ============ -->
+        <main class="main-content">
+
+            <!-- TOP HEADER -->
+            <header class="top-header">
+                <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+                <div class="search-box">
+                    <input type="text" id="globalSearch" placeholder="🔍 Поиск пациентов..."
+                           oninput="handleGlobalSearch(this.value)">
+                    <div id="searchResults" class="search-results"></div>
+                </div>
+                <div class="header-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Сменить тему">🌓</button>
+                    <span id="headerUserName" class="header-user">Врач</span>
+                </div>
+            </header>
+
+            <!-- ============ ALL PAGES ============ -->
+            <div class="page-content">
+
+                <!-- ==================== DASHBOARD ==================== -->
+                <div id="page-dashboard" class="page active">
+                    <div class="page-header">
+                        <h1>📊 Дашборд</h1>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-value" id="statOwners">0</div>
+                            <div class="stat-label">Владельцев</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🐾</div>
+                            <div class="stat-value" id="statPets">0</div>
+                            <div class="stat-label">Питомцев</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💊</div>
+                            <div class="stat-value" id="statVisits">0</div>
+                            <div class="stat-label">Всего приёмов</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-value" id="statToday">0</div>
+                            <div class="stat-label">Сегодня</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📋</div>
+                            <div class="stat-value" id="statIntakes">0</div>
+                            <div class="stat-label">Новых анкет</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📆</div>
+                            <div class="stat-value" id="statWeek">0</div>
+                            <div class="stat-label">За неделю</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dash-card">
+                            <h3>📅 Ближайшие приёмы</h3>
+                            <div id="upcomingList" class="upcoming-list">
+                                <p class="empty-text">Нет предстоящих приёмов</p>
+                            </div>
+                        </div>
+                        <div class="dash-card">
+                            <h3>🔔 Напоминания на сегодня</h3>
+                            <div id="todayReminders" class="reminders-list">
+                                <p class="empty-text">Нет напоминаний</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== PATIENTS ==================== -->
+                <div id="page-patients" class="page">
+                    <div class="page-header">
+                        <h1>🐾 Пациенты</h1>
+                        <div class="page-actions">
+                            <button class="btn btn-primary" onclick="showModal('ownerModal')">+ Владелец</button>
+                            <button class="btn btn-success" onclick="showModal('petModal')">+ Питомец</button>
+                        </div>
+                    </div>
+
+                    <div class="tabs-bar">
+                        <button class="tab-btn active" onclick="switchPatientTab('owners')">Владельцы</button>
+                        <button class="tab-btn" onclick="switchPatientTab('pets')">Питомцы</button>
+                    </div>
+
+                    <div class="search-filter">
+                        <input type="text" id="patientSearch" placeholder="🔍 Поиск..."
+                               oninput="searchPatients(this.value)">
+                    </div>
+
+                    <div id="ownersTab" class="tab-content active">
+                        <div id="ownersList" class="data-list"></div>
+                    </div>
+
+                    <div id="petsTab" class="tab-content">
+                        <div id="petsList" class="data-list"></div>
+                    </div>
+                </div>
+
+                <!-- ==================== PET CARD ==================== -->
+                <div id="page-petcard" class="page">
+                    <div class="page-header">
+                        <button class="btn btn-back" onclick="navigate('patients')">← Назад</button>
+                        <h1 id="petCardTitle">Карточка питомца</h1>
+                    </div>
+
+                    <div class="pet-card-layout">
+                        <div class="pet-info-card">
+                            <div id="petCardInfo"></div>
+                        </div>
+
+                        <div class="pet-tabs">
+                            <div class="tabs-bar">
+                                <button class="tab-btn active" onclick="switchPetCardTab('history')">📋 История</button>
+                                <button class="tab-btn" onclick="switchPetCardTab('files')">📎 Файлы</button>
+                            </div>
+
+                            <div id="petHistoryTab" class="tab-content active">
+                                <div class="tab-header">
+                                    <button class="btn btn-primary btn-sm" onclick="showNewVisitForPet()">+ Новый приём</button>
+                                </div>
+                                <div id="petVisitsList"></div>
+                            </div>
+
+                            <div id="petFilesTab" class="tab-content">
+                                <div class="tab-header">
+                                    <button class="btn btn-primary btn-sm" onclick="uploadFileToPet()">📎 Загрузить файл</button>
+                                    <input type="file" id="petFileInput" style="display:none"
+                                           onchange="handlePetFileUpload(event)" multiple>
+                                </div>
+                                <div id="petFilesList"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pet-card-actions">
+                        <button class="btn btn-primary" onclick="downloadEpicrisis('pdf')">📄 Эпикриз PDF</button>
+                        <button class="btn btn-primary" onclick="downloadEpicrisis('docx')">📝 Эпикриз Word</button>
+                    </div>
+                </div>
+
+                <!-- ==================== CALENDAR ==================== -->
+                <div id="page-calendar" class="page">
+                    <div class="page-header">
+                        <h1>📅 Календарь</h1>
+                    </div>
+
+                    <div class="calendar-controls">
+                        <button class="btn btn-sm" onclick="calendarPrev()">← Пред.</button>
+                        <span id="calendarTitle" class="calendar-title">Неделя</span>
+                        <button class="btn btn-sm" onclick="calendarNext()">След. →</button>
+                        <button class="btn btn-sm btn-primary" onclick="calendarToday()">Сегодня</button>
+                    </div>
+
+                    <div id="calendarGrid" class="calendar-grid"></div>
+                </div>
+
+                <!-- ==================== VISITS ==================== -->
+                <div id="page-visits" class="page">
+                    <div class="page-header">
+                        <h1>💊 Приёмы</h1>
+                        <button class="btn btn-primary" onclick="showModal('visitModal')">+ Новый приём</button>
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="visitStatusFilter" onchange="loadVisits()">
+                            <option value="">Все статусы</option>
+                            <option value="scheduled">Запланированные</option>
+                            <option value="completed">Завершённые</option>
+                            <option value="cancelled">Отменённые</option>
+                        </select>
+                        <select id="visitTypeFilter" onchange="loadVisits()">
+                            <option value="">Все типы</option>
+                            <option value="primary">Первичные</option>
+                            <option value="follow_up">Повторные</option>
+                        </select>
+                    </div>
+
+                    <div id="visitsList" class="data-list"></div>
+                </div>
+                
+                <!-- ==================== TEMPLATES ==================== -->
+                <div id="page-templates" class="page">
+                    <div class="page-header">
+                        <h1>📝 Шаблоны рекомендаций</h1>
+                        <div class="page-actions">
+                            <button class="btn btn-primary" onclick="showModal('categoryModal')">+ Категория</button>
+                            <button class="btn btn-success" onclick="showModal('templateModal')">+ Шаблон</button>
+                        </div>
+                    </div>
+
+                    <div class="templates-layout">
+                        <div class="categories-panel">
+                            <h3>Категории</h3>
+                            <div id="categoriesList"></div>
+                        </div>
+                        <div class="templates-panel">
+                            <div class="search-filter">
+                                <input type="text" id="templateSearch" placeholder="🔍 Поиск шаблонов..."
+                                       oninput="searchTemplates(this.value)">
+                            </div>
+                            <div id="templatesList" class="data-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== QUESTIONNAIRES ==================== -->
+                <div id="page-questionnaires" class="page">
+                    <div class="page-header">
+                        <h1>📋 Опросники</h1>
+                        <button class="btn btn-primary" onclick="showModal('questionnaireModal')">+ Новый опросник</button>
+                    </div>
+
+                    <div class="tabs-bar">
+                        <button class="tab-btn active" onclick="switchQTab('forms')">Опросники</button>
+                        <button class="tab-btn" onclick="switchQTab('responses')">Ответы</button>
+                    </div>
+
+                    <div id="qFormsTab" class="tab-content active">
+                        <div id="questionnairesList" class="data-list"></div>
+                    </div>
+
+                    <div id="qResponsesTab" class="tab-content">
+                        <div id="intakesList" class="data-list"></div>
+                    </div>
+                </div>
+
+                <!-- ==================== REMINDERS ==================== -->
+                <div id="page-reminders" class="page">
+                    <div class="page-header">
+                        <h1>🔔 Напоминания</h1>
+                        <button class="btn btn-primary" onclick="showModal('reminderModal')">+ Напоминание</button>
+                    </div>
+
+                    <div class="filters-bar">
+                        <input type="date" id="reminderDateFilter" onchange="loadReminders()">
+                        <select id="reminderDoneFilter" onchange="loadReminders()">
+                            <option value="false">Активные</option>
+                            <option value="true">Выполненные</option>
+                            <option value="">Все</option>
+                        </select>
+                    </div>
+
+                    <div id="remindersList" class="data-list"></div>
+                </div>
+
+                <!-- ==================== SETTINGS ==================== -->
+                <div id="page-settings" class="page">
+                    <div class="page-header">
+                        <h1>⚙️ Настройки</h1>
+                    </div>
+
+                    <div class="settings-layout">
+                        <div class="settings-section">
+                            <h3>🏥 Клиника</h3>
+                            <div class="form-group">
+                                <label>Название клиники</label>
+                                <input type="text" id="setClinicName">
+                            </div>
+                            <div class="form-group">
+                                <label>Адрес</label>
+                                <input type="text" id="setClinicAddress">
+                            </div>
+                            <div class="form-group">
+                                <label>Телефон</label>
+                                <input type="text" id="setClinicPhone">
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>⏰ Расписание</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Начало работы</label>
+                                    <select id="setWorkStart">
+                                        <option value="7">7:00</option>
+                                        <option value="8">8:00</option>
+                                        <option value="9" selected>9:00</option>
+                                        <option value="10">10:00</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Конец работы</label>
+                                    <select id="setWorkEnd">
+                                        <option value="18">18:00</option>
+                                        <option value="19">19:00</option>
+                                        <option value="20">20:00</option>
+                                        <option value="21" selected>21:00</option>
+                                        <option value="22">22:00</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>📄 Шапка документов</h3>
+                            <div class="form-group">
+                                <label>Заголовок (шапка)</label>
+                                <textarea id="setDocHeader" rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>ФИО врача</label>
+                                <input type="text" id="setDocDoctorName">
+                            </div>
+                            <div class="form-group">
+                                <label>Контакты врача</label>
+                                <input type="text" id="setDocDoctorContacts">
+                            </div>
+                            <div class="form-group">
+                                <label>Подпись (подвал)</label>
+                                <textarea id="setDocFooter" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="settings-section" id="adminSection" style="display:none">
+                            <h3>👥 Управление врачами</h3>
+                            <button class="btn btn-primary" onclick="showModal('doctorModal')">+ Добавить врача</button>
+                            <div id="doctorsList" class="data-list" style="margin-top:15px"></div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>🎨 Оформление формы приёма</h3>
+                            <button class="btn btn-primary" onclick="showVisitFormEditor()">Редактировать форму приёма</button>
+                        </div>
+
+                        <button class="btn btn-primary btn-lg" onclick="saveSettings()" style="margin-top:20px">
+                            💾 Сохранить настройки
+                        </button>
+                    </div>
+                </div>
+
+            </div><!-- /page-content -->
+        </main>
+    </div><!-- /app-layout -->
+  
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- OWNER MODAL -->
+    <div id="ownerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="ownerModalTitle">Новый владелец</h2>
+                <button class="modal-close" onclick="closeModal('ownerModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ownerEditId">
+                <div class="form-group">
+                    <label>ФИО *</label>
+                    <input type="text" id="ownerName" placeholder="Фамилия Имя Отчество">
+                </div>
+                <div class="form-group">
+                    <label>Телефон</label>
+                    <input type="text" id="ownerPhone" placeholder="+7 999 123 4567">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="ownerEmail" placeholder="email@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Мессенджер</label>
+                    <input type="text" id="ownerMessenger" placeholder="Telegram, WhatsApp...">
+                </div>
+                <div class="form-group">
+                    <label>Заметки</label>
+                    <textarea id="ownerNotes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('ownerModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="saveOwner()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PET MODAL -->
+    <div id="petModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="petModalTitle">Новый питомец</h2>
+                <button class="modal-close" onclick="closeModal('petModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="petEditId">
+                <div class="form-group">
+                    <label>Владелец *</label>
+                    <select id="petOwnerSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label>Кличка *</label>
+                    <input type="text" id="petName" placeholder="Кличка питомца">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Вид *</label>
+                        <select id="petSpecies">
+                            <option value="">Выберите...</option>
+                            <option value="Кошка">Кошка</option>
+                            <option value="Собака">Собака</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Порода</label>
+                        <input type="text" id="petBreed" placeholder="Порода">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Возраст</label>
+                        <input type="text" id="petAge" placeholder="2 года">
+                    </div>
+                    <div class="form-group">
+                        <label>Вес (кг)</label>
+                        <input type="number" id="petWeight" step="0.1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Пол</label>
+                        <select id="petSex">
+                            <option value="">—</option>
+                            <option value="М">Самец</option>
+                            <option value="Ж">Самка</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Чип</label>
+                        <input type="text" id="petChip" placeholder="Номер чипа">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Заметки</label>
+                    <textarea id="petNotes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('petModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="savePet()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISIT MODAL -->
+    <div id="visitModal" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2 id="visitModalTitle">Новый приём</h2>
+                <button class="modal-close" onclick="closeModal('visitModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="visitEditId">
+                <div class="visit-header-info" id="visitHeaderInfo"></div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Питомец *</label>
+                        <select id="visitPetSelect" onchange="onVisitPetChange()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Тип</label>
+                        <select id="visitType">
+                            <option value="primary">Первичный</option>
+                            <option value="follow_up">Повторный</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Дата и время</label>
+                        <input type="datetime-local" id="visitDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Статус</label>
+                        <select id="visitStatus">
+                            <option value="scheduled">Запланирован</option>
+                            <option value="completed">Завершён</option>
+                            <option value="cancelled">Отменён</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Вес (кг)</label>
+                        <input type="number" id="visitWeight" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Температура</label>
+                        <input type="number" id="visitTemp" step="0.1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Анамнез (жалобы)</label>
+                    <textarea id="visitAnamnesis" rows="5" style="min-height:120px"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        Рекомендации
+                        <button class="btn btn-sm btn-link" onclick="showTemplateSelector()">📝 Вставить шаблон</button>
+                    </label>
+                    <textarea id="visitRecommendations" rows="7" style="min-height:180px"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Примечания</label>
+                    <textarea id="visitNotes" rows="3"></textarea>
+                </div>
+
+                <div id="visitCustomFields"></div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-footer-left">
+                    <button class="btn btn-sm" onclick="downloadVisitDoc('pdf')" id="btnVisitPdf" style="display:none">📄 PDF</button>
+                    <button class="btn btn-sm" onclick="downloadVisitDoc('docx')" id="btnVisitDocx" style="display:none">📝 Word</button>
+                </div>
+                <button class="btn btn-secondary" onclick="closeModal('visitModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="saveVisit()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEMPLATE SELECTOR MODAL -->
+    <div id="templateSelectorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Выбрать шаблон</h2>
+                <button class="modal-close" onclick="closeModal('templateSelectorModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="templateSelectorSearch" placeholder="🔍 Поиск..."
+                       oninput="filterTemplateSelector(this.value)" class="full-width-input">
+                <div id="templateSelectorList" class="template-selector-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEMPLATE MODAL -->
+    <div id="templateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="templateModalTitle">Новый шаблон</h2>
+                <button class="modal-close" onclick="closeModal('templateModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="templateEditId">
+                <div class="form-group">
+                    <label>Категория</label>
+                    <select id="templateCategory"></select>
+                </div>
+                <div class="form-group">
+                    <label>Название *</label>
+                    <input type="text" id="templateTitle" placeholder="Название шаблона">
+                </div>
+                <div class="form-group">
+                    <label>Содержание *</label>
+                    <textarea id="templateContent" rows="8" placeholder="Текст шаблона рекомендаций..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('templateModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="saveTemplate()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CATEGORY MODAL -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2>Новая категория</h2>
+                <button class="modal-close" onclick="closeModal('categoryModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="categoryEditId">
+                <div class="form-group">
+                    <label>Название *</label>
+                    <input type="text" id="categoryName" placeholder="Название категории">
+                </div>
+                <div class="form-group">
+                    <label>Родительская категория</label>
+                    <select id="categoryParent">
+                        <option value="">Нет (корневая)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('categoryModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="saveCategory()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUESTIONNAIRE MODAL -->
+    <div id="questionnaireModal" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2 id="questionnaireModalTitle">Новый опросник</h2>
+                <button class="modal-close" onclick="closeModal('questionnaireModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="questionnaireEditId">
+                <div class="form-group">
+                    <label>Название *</label>
+                    <input type="text" id="questionnaireName" placeholder="Название опросника">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="questionnaireDesc" rows="2" placeholder="Описание для клиентов"></textarea>
+                </div>
+                <h3>Дополнительные поля</h3>
+                <p class="hint-text">Базовые поля (ФИО, телефон, email, кличка, вид, порода, возраст, жалобы) добавляются автоматически</p>
+                <div id="questionnaireFields"></div>
+                <button class="btn btn-sm btn-success" onclick="addQuestionnaireField()" style="margin-top:10px">+ Добавить поле</button>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('questionnaireModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="saveQuestionnaire()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REMINDER MODAL -->
+    <div id="reminderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="reminderModalTitle">Новое напоминание</h2>
+                <button class="modal-close" onclick="closeModal('reminderModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reminderEditId">
+                <div class="form-group">
+                    <label>Заголовок *</label>
+                    <input type="text" id="reminderTitle" placeholder="О чём напомнить?">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="reminderDesc" rows="3" placeholder="Подробности..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Дата и время *</label>
+                    <input type="datetime-local" id="reminderDate">
+                </div>
+                <div class="form-group">
+                    <label>Тип</label>
+                    <select id="reminderType">
+                        <option value="custom">Своё</option>
+                        <option value="follow_up">Повторный визит</option>
+                        <option value="vaccination">Вакцинация</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('reminderModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="saveReminder()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DOCTOR MODAL (admin) -->
+    <div id="doctorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Новый врач</h2>
+                <button class="modal-close" onclick="closeModal('doctorModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>ФИО *</label>
+                    <input type="text" id="newDoctorName" placeholder="Фамилия Имя Отчество">
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="newDoctorEmail" placeholder="email@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Логин *</label>
+                    <input type="text" id="newDoctorUsername" placeholder="login">
+                </div>
+                <div class="form-group">
+                    <label>Пароль *</label>
+                    <input type="password" id="newDoctorPassword" placeholder="Минимум 6 символов">
+                </div>
+                <div class="form-group">
+                    <label>Телефон</label>
+                    <input type="text" id="newDoctorPhone" placeholder="+7...">
+                </div>
+                <div class="form-group">
+                    <label>Специализация</label>
+                    <input type="text" id="newDoctorSpec" placeholder="Терапевт, дерматолог...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('doctorModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="saveDoctor()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CALENDAR SLOT MODAL -->
+    <div id="calendarSlotModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2 id="slotModalTitle">Запись на приём</h2>
+                <button class="modal-close" onclick="closeModal('calendarSlotModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="slotEditId">
+                <input type="hidden" id="slotDate">
+                <input type="hidden" id="slotHour">
+                <div class="form-group">
+                    <label>Питомец</label>
+                    <select id="slotPetSelect">
+                        <option value="">— Свободный слот —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Заметка</label>
+                    <input type="text" id="slotNotes" placeholder="Комментарий к записи">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('calendarSlotModal')">Отмена</button>
+                <button class="btn btn-danger" onclick="deleteSlot()" id="btnDeleteSlot" style="display:none">Удалить</button>
+                <button class="btn btn-primary" onclick="saveSlot()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INTAKE VIEW MODAL -->
+    <div id="intakeViewModal" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>Просмотр анкеты</h2>
+                <button class="modal-close" onclick="closeModal('intakeViewModal')">✕</button>
+            </div>
+            <div class="modal-body" id="intakeViewBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('intakeViewModal')">Закрыть</button>
+                <button class="btn btn-success" onclick="convertIntake()" id="btnConvertIntake">
+                    📋 Создать карточку пациента
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISIT FORM EDITOR MODAL -->
+    <div id="visitFormEditorModal" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>Редактор формы приёма</h2>
+                <button class="modal-close" onclick="closeModal('visitFormEditorModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="hint-text">Настройте поля, которые отображаются в форме приёма</p>
+                <div id="visitFormFields"></div>
+                <button class="btn btn-sm btn-success" onclick="addVisitFormField()" style="margin-top:10px">+ Добавить поле</button>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('visitFormEditorModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="saveVisitForm()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="toast"></div>
+
+    <!-- JAVASCRIPT -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
