@@ -1,189 +1,198 @@
-import io
-from datetime import datetime
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import Paragraph
+import os
 
 
-async def generate_visit_pdf(visit_data: dict, doctor_settings: dict = None) -> bytes:
-    """Генерация PDF для одного приёма"""
-    try:
-        from weasyprint import HTML
-
-        html_content = _build_visit_html(visit_data, doctor_settings)
-        pdf_bytes = HTML(string=html_content).write_pdf()
-        return pdf_bytes
-    except ImportError:
-        return _generate_simple_pdf(visit_data, doctor_settings)
-
-
-async def generate_epicrisis_pdf(visits_data: list, pet_data: dict, doctor_settings: dict = None) -> bytes:
-    """Генерация эпикриза — все приёмы в 1 файл"""
-    try:
-        from weasyprint import HTML
-
-        html_content = _build_epicrisis_html(visits_data, pet_data, doctor_settings)
-        pdf_bytes = HTML(string=html_content).write_pdf()
-        return pdf_bytes
-    except ImportError:
-        return _generate_simple_epicrisis(visits_data, pet_data, doctor_settings)
+def _register_fonts():
+    """Пытаемся зарегистрировать кириллический шрифт"""
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+    ]
+    for path in font_paths:
+        if os.path.exists(path):
+            try:
+                pdfmetrics.registerFont(TTFont('CustomFont', path))
+                return 'CustomFont'
+            except Exception:
+                continue
+    return 'Helvetica'
 
 
-def _build_visit_html(visit: dict, settings: dict = None) -> str:
-    header = ""
-    footer = ""
-    doctor_name = ""
-    doctor_contacts = ""
-
-    if settings:
-        header = settings.get("doc_header", "") or ""
-        footer = settings.get("doc_footer", "") or ""
-        doctor_name = settings.get("doc_doctor_name", "") or ""
-        doctor_contacts = settings.get("doc_doctor_contacts", "") or ""
-
-    visit_date = visit.get("visit_date", "")
-    if isinstance(visit_date, datetime):
-        visit_date = visit_date.strftime("%d.%m.%Y %H:%M")
-
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body {{ font-family: Arial, sans-serif; padding: 40px; color: #333; }}
-            .header {{ text-align: center; margin-bottom: 30px; border-bottom: 2px solid #4A90D9; padding-bottom: 15px; }}
-            .header h1 {{ color: #4A90D9; margin: 0; font-size: 20px; }}
-            .header p {{ margin: 5px 0; color: #666; }}
-            .patient-info {{ background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
-            .patient-info h3 {{ margin-top: 0; color: #4A90D9; }}
-            .section {{ margin-bottom: 20px; }}
-            .section h3 {{ color: #4A90D9; border-bottom: 1px solid #ddd; padding-bottom: 5px; }}
-            .section p {{ white-space: pre-wrap; line-height: 1.6; }}
-            .visit-type {{ display: inline-block; padding: 3px 10px; border-radius: 4px;
-                          background: #e8f4fd; color: #4A90D9; font-size: 14px; }}
-            .footer {{ margin-top: 40px; border-top: 2px solid #4A90D9; padding-top: 15px; text-align: center; color: #666; }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>{header if header else 'Ветеринарная консультация'}</h1>
-            {f'<p>{doctor_name}</p>' if doctor_name else ''}
-            {f'<p>{doctor_contacts}</p>' if doctor_contacts else ''}
-        </div>
-
-        <div class="patient-info">
-            <h3>Данные пациента</h3>
-            <p><strong>Владелец:</strong> {visit.get('owner_name', '')}</p>
-            <p><strong>Питомец:</strong> {visit.get('pet_name', '')} ({visit.get('pet_species', '')}
-               {', ' + visit.get('pet_breed', '') if visit.get('pet_breed') else ''})</p>
-            <p><strong>Дата:</strong> {visit_date}</p>
-            <span class="visit-type">{'Первичный' if visit.get('visit_type') == 'primary' else 'Повторный'}</span>
-        </div>
-
-        {f'<div class="section"><h3>Вес</h3><p>{visit.get("weight", "")} кг</p></div>' if visit.get('weight') else ''}
-
-        {f'<div class="section"><h3>Анамнез</h3><p>{visit.get("anamnesis", "")}</p></div>' if visit.get('anamnesis') else ''}
-
-        {f'<div class="section"><h3>Рекомендации</h3><p>{visit.get("recommendations", "")}</p></div>' if visit.get('recommendations') else ''}
-
-        {f'<div class="section"><h3>Примечания</h3><p>{visit.get("notes", "")}</p></div>' if visit.get('notes') else ''}
-
-        <div class="footer">
-            {footer if footer else ''}
-        </div>
-    </body>
-    </html>
-    """
+FONT_NAME = _register_fonts()
 
 
-def _build_epicrisis_html(visits: list, pet: dict, settings: dict = None) -> str:
-    header = ""
-    footer = ""
-    doctor_name = ""
+def _draw_text(c, x, y, text, font_size=10, bold=False):
+    """Рисуем текст с переносом строк"""
+    font = FONT_NAME
+    c.setFont(font, font_size)
+    if not text:
+        return y
 
-    if settings:
-        header = settings.get("doc_header", "") or ""
-        footer = settings.get("doc_footer", "") or ""
-        doctor_name = settings.get("doc_doctor_name", "") or ""
+    lines = str(text).split('\n')
+    for line in lines:
+        # Простой перенос длинных строк
+        while len(line) > 90:
+            c.drawString(x, y, line[:90])
+            line = line[90:]
+            y -= font_size + 4
+            if y < 40 * mm:
+                c.showPage()
+                c.setFont(font, font_size)
+                y = 270 * mm
+        c.drawString(x, y, line)
+        y -= font_size + 4
 
-    visits_html = ""
-    for i, visit in enumerate(visits, 1):
-        visit_date = visit.get("visit_date", "")
-        if isinstance(visit_date, datetime):
-            visit_date = visit_date.strftime("%d.%m.%Y %H:%M")
-
-        visits_html += f"""
-        <div class="visit-block">
-            <h3>Приём #{i} — {visit_date}
-                <span class="visit-type">{'Первичный' if visit.get('visit_type') == 'primary' else 'Повторный'}</span>
-            </h3>
-            {f'<p><strong>Вес:</strong> {visit.get("weight")} кг</p>' if visit.get('weight') else ''}
-            {f'<div class="field"><strong>Анамнез:</strong><p>{visit.get("anamnesis", "")}</p></div>' if visit.get('anamnesis') else ''}
-            {f'<div class="field"><strong>Рекомендации:</strong><p>{visit.get("recommendations", "")}</p></div>' if visit.get('recommendations') else ''}
-            {f'<div class="field"><strong>Примечания:</strong><p>{visit.get("notes", "")}</p></div>' if visit.get('notes') else ''}
-        </div>
-        """
-
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body {{ font-family: Arial, sans-serif; padding: 40px; color: #333; }}
-            .header {{ text-align: center; margin-bottom: 30px; border-bottom: 2px solid #4A90D9; padding-bottom: 15px; }}
-            .header h1 {{ color: #4A90D9; margin: 0; }}
-            .patient-info {{ background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 25px; }}
-            .visit-block {{ border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; }}
-            .visit-block h3 {{ color: #4A90D9; margin-top: 0; }}
-            .visit-type {{ font-size: 12px; background: #e8f4fd; padding: 2px 8px; border-radius: 4px; }}
-            .field p {{ white-space: pre-wrap; line-height: 1.6; }}
-            .footer {{ margin-top: 40px; border-top: 2px solid #4A90D9; padding-top: 15px; text-align: center; }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>Эпикриз</h1>
-            <p>{header if header else ''}</p>
-            {f'<p>Врач: {doctor_name}</p>' if doctor_name else ''}
-        </div>
-
-        <div class="patient-info">
-            <h3>Пациент</h3>
-            <p><strong>Владелец:</strong> {pet.get('owner_name', '')}</p>
-            <p><strong>Питомец:</strong> {pet.get('name', '')} ({pet.get('species', '')}
-               {', ' + pet.get('breed', '') if pet.get('breed') else ''})</p>
-            <p><strong>Возраст:</strong> {pet.get('age', '')}</p>
-        </div>
-
-        <h2>История приёмов ({len(visits)})</h2>
-        {visits_html}
-
-        <div class="footer">{footer if footer else ''}</div>
-    </body>
-    </html>
-    """
+    return y
 
 
-def _generate_simple_pdf(visit: dict, settings: dict = None) -> bytes:
-    """Fallback если WeasyPrint не установлен"""
-    content = f"Ветеринарная консультация\n\n"
-    content += f"Владелец: {visit.get('owner_name', '')}\n"
-    content += f"Питомец: {visit.get('pet_name', '')}\n"
-    content += f"Дата: {visit.get('visit_date', '')}\n\n"
-    if visit.get('anamnesis'):
-        content += f"Анамнез:\n{visit['anamnesis']}\n\n"
-    if visit.get('recommendations'):
-        content += f"Рекомендации:\n{visit['recommendations']}\n"
-    return content.encode('utf-8')
+async def generate_visit_pdf(visit_data: dict, doc_settings: dict) -> bytes:
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    y = height - 30 * mm
+
+    # Header
+    if doc_settings.get('doc_header'):
+        y = _draw_text(c, 20 * mm, y, doc_settings['doc_header'], 12)
+        y -= 5
+
+    if doc_settings.get('clinic_name'):
+        y = _draw_text(c, 20 * mm, y, doc_settings['clinic_name'], 14)
+        y -= 3
+
+    # Line
+    c.setStrokeColorRGB(0.3, 0.5, 0.8)
+    c.setLineWidth(1)
+    c.line(20 * mm, y, width - 20 * mm, y)
+    y -= 10
+
+    # Title
+    y = _draw_text(c, 20 * mm, y, "КАРТА ПРИЁМА", 16)
+    y -= 8
+
+    # Visit info
+    y = _draw_text(c, 20 * mm, y, f"Дата: {visit_data.get('visit_date', '')}", 11)
+    y = _draw_text(c, 20 * mm, y, f"Тип: {visit_data.get('visit_type', '')}", 11)
+    y -= 5
+
+    # Patient info
+    y = _draw_text(c, 20 * mm, y, "ПАЦИЕНТ", 13)
+    y = _draw_text(c, 20 * mm, y, f"Кличка: {visit_data.get('pet_name', '')}", 11)
+    y = _draw_text(c, 20 * mm, y, f"Вид: {visit_data.get('pet_species', '')} | Порода: {visit_data.get('pet_breed', '')}", 11)
+    y = _draw_text(c, 20 * mm, y, f"Владелец: {visit_data.get('owner_name', '')}", 11)
+    y -= 5
+
+    # Measurements
+    if visit_data.get('weight') or visit_data.get('temperature'):
+        y = _draw_text(c, 20 * mm, y, "ИЗМЕРЕНИЯ", 13)
+        if visit_data.get('weight'):
+            y = _draw_text(c, 20 * mm, y, f"Вес: {visit_data['weight']} кг", 11)
+        if visit_data.get('temperature'):
+            y = _draw_text(c, 20 * mm, y, f"Температура: {visit_data['temperature']}°C", 11)
+        y -= 5
+
+    # Anamnesis
+    if visit_data.get('anamnesis'):
+        y = _draw_text(c, 20 * mm, y, "АНАМНЕЗ", 13)
+        y = _draw_text(c, 20 * mm, y, visit_data['anamnesis'], 10)
+        y -= 5
+
+    # Recommendations
+    if visit_data.get('recommendations'):
+        y = _draw_text(c, 20 * mm, y, "РЕКОМЕНДАЦИИ", 13)
+        y = _draw_text(c, 20 * mm, y, visit_data['recommendations'], 10)
+        y -= 5
+
+    # Notes
+    if visit_data.get('notes'):
+        y = _draw_text(c, 20 * mm, y, "ПРИМЕЧАНИЯ", 13)
+        y = _draw_text(c, 20 * mm, y, visit_data['notes'], 10)
+        y -= 5
+
+    # Footer
+    y -= 10
+    c.setStrokeColorRGB(0.3, 0.5, 0.8)
+    c.line(20 * mm, y, width - 20 * mm, y)
+    y -= 8
+
+    if doc_settings.get('doc_doctor_name'):
+        y = _draw_text(c, 20 * mm, y, f"Врач: {doc_settings['doc_doctor_name']}", 11)
+    if doc_settings.get('doc_doctor_contacts'):
+        y = _draw_text(c, 20 * mm, y, doc_settings['doc_doctor_contacts'], 10)
+    if doc_settings.get('doc_footer'):
+        y = _draw_text(c, 20 * mm, y, doc_settings['doc_footer'], 9)
+
+    c.save()
+    return buffer.getvalue()
 
 
-def _generate_simple_epicrisis(visits: list, pet: dict, settings: dict = None) -> bytes:
-    content = f"Эпикриз\n\nПитомец: {pet.get('name', '')}\n\n"
-    for i, v in enumerate(visits, 1):
-        content += f"--- Приём #{i} ---\n"
-        content += f"Дата: {v.get('visit_date', '')}\n"
+async def generate_epicrisis_pdf(visits_data: list, pet_data: dict, doc_settings: dict) -> bytes:
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    y = height - 30 * mm
+
+    # Header
+    if doc_settings.get('doc_header'):
+        y = _draw_text(c, 20 * mm, y, doc_settings['doc_header'], 12)
+        y -= 3
+
+    if doc_settings.get('clinic_name'):
+        y = _draw_text(c, 20 * mm, y, doc_settings['clinic_name'], 14)
+
+    c.setStrokeColorRGB(0.3, 0.5, 0.8)
+    c.line(20 * mm, y - 3, width - 20 * mm, y - 3)
+    y -= 15
+
+    # Title
+    y = _draw_text(c, 20 * mm, y, "ЭПИКРИЗ", 16)
+    y -= 8
+
+    # Pet info
+    y = _draw_text(c, 20 * mm, y, f"Пациент: {pet_data['name']} ({pet_data['species']} {pet_data.get('breed', '')})", 11)
+    y = _draw_text(c, 20 * mm, y, f"Возраст: {pet_data.get('age', '')} | Владелец: {pet_data.get('owner_name', '')}", 11)
+    y -= 8
+
+    # Visits
+    for i, v in enumerate(visits_data, 1):
+        if y < 60 * mm:
+            c.showPage()
+            y = height - 30 * mm
+
+        c.setStrokeColorRGB(0.8, 0.8, 0.8)
+        c.line(20 * mm, y, width - 20 * mm, y)
+        y -= 8
+
+        y = _draw_text(c, 20 * mm, y, f"Приём #{i} — {v.get('visit_date', '')}", 12)
+
+        if v.get('weight'):
+            y = _draw_text(c, 25 * mm, y, f"Вес: {v['weight']} кг", 10)
+        if v.get('temperature'):
+            y = _draw_text(c, 25 * mm, y, f"Температура: {v['temperature']}°C", 10)
         if v.get('anamnesis'):
-            content += f"Анамнез: {v['anamnesis']}\n"
+            y = _draw_text(c, 25 * mm, y, f"Анамнез: {v['anamnesis']}", 10)
         if v.get('recommendations'):
-            content += f"Рекомендации: {v['recommendations']}\n"
-        content += "\n"
-    return content.encode('utf-8')
+            y = _draw_text(c, 25 * mm, y, f"Рекомендации: {v['recommendations']}", 10)
+        y -= 5
+
+    # Footer
+    y -= 10
+    c.setStrokeColorRGB(0.3, 0.5, 0.8)
+    c.line(20 * mm, y, width - 20 * mm, y)
+    y -= 8
+
+    if doc_settings.get('doc_doctor_name'):
+        y = _draw_text(c, 20 * mm, y, f"Врач: {doc_settings['doc_doctor_name']}", 11)
+    if doc_settings.get('doc_footer'):
+        y = _draw_text(c, 20 * mm, y, doc_settings['doc_footer'], 9)
+
+    c.save()
+    return buffer.getvalue()
