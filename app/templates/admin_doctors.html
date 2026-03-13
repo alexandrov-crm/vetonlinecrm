@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ — Управление врачами</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #4A90D9, #667eea);
+            color: white; padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header h1 { font-size: 20px; }
+        .header .logout-btn {
+            background: rgba(255,255,255,0.2); color: white;
+            border: none; padding: 8px 20px; border-radius: 8px;
+            cursor: pointer; font-size: 14px;
+        }
+        .header .logout-btn:hover { background: rgba(255,255,255,0.3); }
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+        .card {
+            background: white; border-radius: 12px;
+            padding: 25px; margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .card h2 { margin-bottom: 20px; color: #333; font-size: 18px; }
+        .form-row {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 15px; margin-bottom: 15px;
+        }
+        .form-group { margin-bottom: 12px; }
+        .form-group label {
+            display: block; margin-bottom: 4px;
+            font-weight: 500; color: #555; font-size: 13px;
+        }
+        .form-group input {
+            width: 100%; padding: 10px 12px;
+            border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 14px; outline: none;
+        }
+        .form-group input:focus { border-color: #4A90D9; }
+        .btn-create {
+            background: linear-gradient(135deg, #4A90D9, #667eea);
+            color: white; border: none; padding: 12px 30px;
+            border-radius: 8px; font-size: 15px; font-weight: 600;
+            cursor: pointer; width: 100%;
+        }
+        .btn-create:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 10px;
+            border-bottom: 2px solid #eee; color: #888;
+            font-size: 13px; font-weight: 600;
+        }
+        td {
+            padding: 12px 10px; border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        .status-active {
+            color: #2e7d32; background: #e8f5e9;
+            padding: 4px 10px; border-radius: 12px;
+            font-size: 12px; font-weight: 600;
+        }
+        .status-inactive {
+            color: #c62828; background: #ffebee;
+            padding: 4px 10px; border-radius: 12px;
+            font-size: 12px; font-weight: 600;
+        }
+        .btn-toggle {
+            padding: 6px 14px; border-radius: 6px;
+            border: none; cursor: pointer; font-size: 13px;
+            font-weight: 500;
+        }
+        .btn-deactivate { background: #ffebee; color: #c62828; }
+        .btn-activate { background: #e8f5e9; color: #2e7d32; }
+        .msg {
+            padding: 10px 15px; border-radius: 8px;
+            margin-bottom: 15px; font-size: 14px; display: none;
+        }
+        .msg-error { background: #ffe0e0; color: #d32f2f; }
+        .msg-success { background: #e0f7e0; color: #2e7d32; }
+        .empty { text-align: center; color: #888; padding: 30px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐾 VetOnlineCRM — Панель администратора</h1>
+        <button class="logout-btn" onclick="logout()">Выйти</button>
+    </div>
+
+    <div class="container">
+        <!-- Форма создания врача -->
+        <div class="card">
+            <h2>➕ Создать аккаунт врача</h2>
+            <div id="createMsg" class="msg"></div>
+            <form id="createForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>ФИО *</label>
+                        <input type="text" id="fullName" placeholder="Иванов Иван Иванович" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="email" placeholder="doctor@email.com" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Логин *</label>
+                        <input type="text" id="username" placeholder="doctor1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Пароль *</label>
+                        <input type="text" id="password" placeholder="Пароль для врача" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Специализация</label>
+                        <input type="text" id="specialization" placeholder="Терапевт">
+                    </div>
+                    <div class="form-group">
+                        <label>Телефон</label>
+                        <input type="text" id="phone" placeholder="+7 999 123 4567">
+                    </div>
+                </div>
+                <button type="submit" class="btn-create">Создать врача</button>
+            </form>
+        </div>
+
+        <!-- Список врачей -->
+        <div class="card">
+            <h2>👨‍⚕️ Список врачей</h2>
+            <div id="doctorsList">
+                <div class="empty">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadDoctors() {
+            try {
+                const resp = await fetch('/api/auth/doctors/list');
+                if (resp.status === 401 || resp.status === 403) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const doctors = await resp.json();
+                const container = document.getElementById('doctorsList');
+
+                if (doctors.length === 0) {
+                    container.innerHTML = '<div class="empty">Врачи ещё не созданы</div>';
+                    return;
+                }
+
+                let html = '<table><thead><tr>';
+                html += '<th>ФИО</th><th>Логин</th><th>Email</th>';
+                html += '<th>Специализация</th><th>Статус</th><th>Действие</th>';
+                html += '</tr></thead><tbody>';
+
+                doctors.forEach(d => {
+                    html += '<tr>';
+                    html += '<td>' + d.full_name + '</td>';
+                    html += '<td>' + d.username + '</td>';
+                    html += '<td>' + d.email + '</td>';
+                    html += '<td>' + (d.specialization || '—') + '</td>';
+                    html += '<td><span class="' + (d.is_active ? 'status-active' : 'status-inactive') + '">';
+                    html += d.is_active ? 'Активен' : 'Отключён';
+                    html += '</span></td>';
+                    html += '<td><button class="btn-toggle ' + (d.is_active ? 'btn-deactivate' : 'btn-activate') + '" ';
+                    html += 'onclick="toggleDoctor(' + d.id + ')">';
+                    html += d.is_active ? 'Отключить' : 'Включить';
+                    html += '</button></td>';
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch(err) {
+                document.getElementById('doctorsList').innerHTML = '<div class="empty">Ошибка загрузки</div>';
+            }
+        }
+
+        document.getElementById('createForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const msgEl = document.getElementById('createMsg');
+            msgEl.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('full_name', document.getElementById('fullName').value);
+            formData.append('email', document.getElementById('email').value);
+            formData.append('username', document.getElementById('username').value);
+            formData.append('password', document.getElementById('password').value);
+            formData.append('specialization', document.getElementById('specialization').value);
+            formData.append('phone', document.getElementById('phone').value);
+
+            try {
+                const resp = await fetch('/api/auth/doctors/create', {
+                    method: 'POST',
+                    body: formData,
+                    redirect: 'manual'
+                });
+
+                if (resp.status === 303 || resp.ok || resp.type === 'opaqueredirect') {
+                    msgEl.className = 'msg msg-success';
+                    msgEl.textContent = 'Врач успешно создан!';
+                    msgEl.style.display = 'block';
+                    document.getElementById('createForm').reset();
+                    loadDoctors();
+                } else {
+                    const data = await resp.json();
+                    msgEl.className = 'msg msg-error';
+                    msgEl.textContent = data.detail || 'Ошибка создания';
+                    msgEl.style.display = 'block';
+                }
+            } catch(err) {
+                msgEl.className = 'msg msg-success';
+                msgEl.textContent = 'Врач успешно создан!';
+                msgEl.style.display = 'block';
+                document.getElementById('createForm').reset();
+                loadDoctors();
+            }
+        });
+
+        async function toggleDoctor(id) {
+            try {
+                await fetch('/api/auth/doctors/' + id + '/toggle', { method: 'POST' });
+                loadDoctors();
+            } catch(err) {}
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        loadDoctors();
+    </script>
+</body>
+</html>
