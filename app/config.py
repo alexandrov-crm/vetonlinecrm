@@ -4,6 +4,7 @@ import os
 
 class Settings(BaseSettings):
     APP_NAME: str = "VetOnlineCRM"
+    PROJECT_NAME: str = "VetOnlineCRM"
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_HOURS: int = 24
