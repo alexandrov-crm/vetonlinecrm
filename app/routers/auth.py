@@ -33,6 +33,21 @@ async def get_current_admin(doctor: Doctor = Depends(get_current_doctor)) -> Doc
     return doctor
 
 
+# === /api/auth/me — ЭТОГО НЕ ХВАТАЛО ===
+@router.get("/me")
+async def get_me(doctor: Doctor = Depends(get_current_doctor)):
+    return {
+        "id": doctor.id,
+        "username": doctor.username,
+        "full_name": doctor.full_name,
+        "email": doctor.email,
+        "specialization": doctor.specialization or "",
+        "phone": doctor.phone or "",
+        "is_admin": doctor.is_admin,
+        "is_active": doctor.is_active
+    }
+
+
 @router.post("/login")
 async def login(request: Request, session: AsyncSession = Depends(get_session)):
     form = await request.form()
@@ -83,7 +98,6 @@ async def create_doctor(
     if not username or not password or not full_name or not email:
         raise HTTPException(status_code=400, detail="Заполните все обязательные поля")
 
-    # Проверка уникальности
     existing = await session.execute(select(Doctor).where(
         (Doctor.username == username) | (Doctor.email == email)
     ))
