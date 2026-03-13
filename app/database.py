@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import text
 from app.config import settings
 
 db_url = settings.DATABASE_URL
@@ -32,6 +33,30 @@ async def get_db():
 get_session = get_db
 
 
+async def migrate_db():
+    """Добавляет новые колонки в существующие таблицы"""
+    async with engine.begin() as conn:
+        # Добавляем is_admin если нет
+        try:
+            await conn.execute(text(
+                "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE"
+            ))
+            print("✅ Колонка is_admin добавлена")
+        except Exception as e:
+            print(f"⚠️ is_admin: {e}")
+
+        # Добавляем username если нет
+        try:
+            await conn.execute(text(
+                "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS username VARCHAR UNIQUE"
+            ))
+            print("✅ Колонка username добавлена")
+        except Exception as e:
+            print(f"⚠️ username: {e}")
+
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    # Миграция существующих таблиц
+    await migrate_db()
