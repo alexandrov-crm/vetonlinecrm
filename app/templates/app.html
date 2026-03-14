@@ -91,16 +91,6 @@
 
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <div class="stat-icon">👥</div>
-                            <div class="stat-value" id="statOwners">0</div>
-                            <div class="stat-label">Владельцев</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">🐾</div>
-                            <div class="stat-value" id="statPets">0</div>
-                            <div class="stat-label">Питомцев</div>
-                        </div>
-                        <div class="stat-card">
                             <div class="stat-icon">💊</div>
                             <div class="stat-value" id="statVisits">0</div>
                             <div class="stat-label">Всего приёмов</div>
@@ -233,12 +223,6 @@
                     </div>
 
                     <div class="filters-bar">
-                        <select id="visitStatusFilter" onchange="loadVisits()">
-                            <option value="">Все статусы</option>
-                            <option value="scheduled">Запланированные</option>
-                            <option value="completed">Завершённые</option>
-                            <option value="cancelled">Отменённые</option>
-                        </select>
                         <select id="visitTypeFilter" onchange="loadVisits()">
                             <option value="">Все типы</option>
                             <option value="primary">Первичные</option>
@@ -426,14 +410,6 @@
                     <label>Email</label>
                     <input type="email" id="ownerEmail" placeholder="email@example.com">
                 </div>
-                <div class="form-group">
-                    <label>Мессенджер</label>
-                    <input type="text" id="ownerMessenger" placeholder="Telegram, WhatsApp...">
-                </div>
-                <div class="form-group">
-                    <label>Заметки</label>
-                    <textarea id="ownerNotes" rows="2"></textarea>
-                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('ownerModal')">Отмена</button>
@@ -534,29 +510,11 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Дата и время</label>
-                        <input type="datetime-local" id="visitDate">
-                    </div>
-                    <div class="form-group">
-                        <label>Статус</label>
-                        <select id="visitStatus">
-                            <option value="scheduled">Запланирован</option>
-                            <option value="completed">Завершён</option>
-                            <option value="cancelled">Отменён</option>
-                        </select>
-                    </div>
-                </div>
-
+                
                 <div class="form-row">
                     <div class="form-group">
                         <label>Вес (кг)</label>
                         <input type="number" id="visitWeight" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label>Температура</label>
-                        <input type="number" id="visitTemp" step="0.1">
                     </div>
                 </div>
 
