@@ -46,10 +46,8 @@ function navigate(page) {
     const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
     if (navEl) navEl.classList.add('active');
 
-    // Close mobile sidebar
     document.getElementById('sidebar').classList.remove('open');
 
-    // Load data for page
     switch (page) {
         case 'dashboard': loadDashboard(); break;
         case 'patients': loadOwners(); loadPets(); break;
@@ -99,7 +97,6 @@ function closeModal(id) {
     document.getElementById(id).classList.remove('active');
 }
 
-// Close modal on backdrop click
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
         e.target.classList.remove('active');
@@ -162,7 +159,6 @@ async function handleGlobalSearch(query) {
     }, 300);
 }
 
-// Hide search results on click outside
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.search-box')) {
         document.getElementById('searchResults').classList.remove('active');
@@ -173,36 +169,31 @@ function openOwnerPets(ownerId) {
     document.getElementById('searchResults').classList.remove('active');
     document.getElementById('globalSearch').value = '';
     navigate('patients');
-    // TODO: filter by owner
 }
 
 // ============ DASHBOARD ============
+// >>> ПУНКТ 8: убраны владельцы/питомцы, ближайшие приёмы только сегодня
 async function loadDashboard() {
     try {
         const resp = await fetch('/api/dashboard');
         const data = await resp.json();
 
-        document.getElementById('statOwners').textContent = data.stats.total_owners;
-        document.getElementById('statPets').textContent = data.stats.total_pets;
-        document.getElementById('statVisits').textContent = data.stats.total_visits;
-        document.getElementById('statToday').textContent = data.stats.today_visits;
-        document.getElementById('statIntakes').textContent = data.stats.new_intakes;
-        document.getElementById('statWeek').textContent = data.stats.week_visits;
+        document.getElementById('statVisits').textContent = data.stats.total_visits || 0;
+        document.getElementById('statToday').textContent = data.stats.today_visits || 0;
+        document.getElementById('statIntakes').textContent = data.stats.new_intakes || 0;
+        document.getElementById('statWeek').textContent = data.stats.week_visits || 0;
 
-        // Upcoming
+        // Upcoming — только сегодня, формат: время — ФИО — Кличка — телефон
         const upcomingEl = document.getElementById('upcomingList');
         if (data.upcoming && data.upcoming.length > 0) {
             upcomingEl.innerHTML = data.upcoming.map(u => `
                 <div class="upcoming-item">
-                    <div>
-                        <span class="time">${u.date} ${u.hour}:00</span>
-                        <span class="patient"> — ${u.pet_name} (${u.pet_species})</span>
-                    </div>
-                    <div class="info">${u.owner_name} ${u.owner_phone}</div>
+                    <span class="time">${String(u.hour).padStart(2,'0')}:00</span>
+                    <span class="patient"> — ${u.owner_name} — ${u.pet_name} — ${u.owner_phone || ''}</span>
                 </div>
             `).join('');
         } else {
-            upcomingEl.innerHTML = '<p class="empty-text">Нет предстоящих приёмов</p>';
+            upcomingEl.innerHTML = '<p class="empty-text">Нет приёмов на сегодня</p>';
         }
 
         // Reminders
@@ -226,6 +217,7 @@ async function loadDashboard() {
 }
 
 // ============ OWNERS ============
+// >>> ПУНКТ 1: убраны мессенджер и заметки из отображения
 async function loadOwners(search = '') {
     try {
         const resp = await fetch(`/api/patients/owners?search=${encodeURIComponent(search)}`);
@@ -242,7 +234,7 @@ async function loadOwners(search = '') {
                 <div class="data-card-info">
                     <div class="title">👤 ${o.full_name}</div>
                     <div class="subtitle">${o.phone || 'Нет телефона'} ${o.email ? '• ' + o.email : ''}</div>
-                    <div class="details">${o.messenger ? '💬 ' + o.messenger : ''} • Питомцев: ${o.pets ? o.pets.length : 0}</div>
+                    <div class="details">Питомцев: ${o.pets ? o.pets.length : 0}</div>
                 </div>
                 <div class="data-card-actions">
                     <button onclick="event.stopPropagation(); editOwner(${o.id})" title="Редактировать">✏️</button>
@@ -255,14 +247,13 @@ async function loadOwners(search = '') {
     }
 }
 
+// >>> ПУНКТ 1: убраны messenger и notes из отправки
 async function saveOwner() {
     const editId = document.getElementById('ownerEditId').value;
     const data = {
         full_name: document.getElementById('ownerName').value,
         phone: document.getElementById('ownerPhone').value,
-        email: document.getElementById('ownerEmail').value,
-        messenger: document.getElementById('ownerMessenger').value,
-        notes: document.getElementById('ownerNotes').value
+        email: document.getElementById('ownerEmail').value
     };
 
     if (!data.full_name) {
@@ -293,6 +284,7 @@ async function saveOwner() {
     }
 }
 
+// >>> ПУНКТ 1: убраны messenger и notes из редактирования
 async function editOwner(id) {
     try {
         const resp = await fetch(`/api/patients/owners?search=`);
@@ -304,8 +296,6 @@ async function editOwner(id) {
         document.getElementById('ownerName').value = owner.full_name;
         document.getElementById('ownerPhone').value = owner.phone || '';
         document.getElementById('ownerEmail').value = owner.email || '';
-        document.getElementById('ownerMessenger').value = owner.messenger || '';
-        document.getElementById('ownerNotes').value = owner.notes || '';
         document.getElementById('ownerModalTitle').textContent = 'Редактировать владельца';
         showModal('ownerModal');
     } catch (e) {
@@ -329,13 +319,12 @@ async function deleteOwner(id) {
     }
 }
 
+// >>> ПУНКТ 1: убраны messenger и notes
 function clearOwnerForm() {
     document.getElementById('ownerEditId').value = '';
     document.getElementById('ownerName').value = '';
     document.getElementById('ownerPhone').value = '';
     document.getElementById('ownerEmail').value = '';
-    document.getElementById('ownerMessenger').value = '';
-    document.getElementById('ownerNotes').value = '';
     document.getElementById('ownerModalTitle').textContent = 'Новый владелец';
 }
 
@@ -481,7 +470,6 @@ async function loadOwnerSelect() {
     }
 }
 
-// Patient tabs
 function switchPatientTab(tab) {
     document.querySelectorAll('#page-patients .tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('ownersTab').classList.remove('active');
@@ -505,7 +493,6 @@ function searchPatients(query) {
     }
 }
 
-// Override showModal for pet modal to load owners
 const originalShowModal = showModal;
 showModal = function(id) {
     if (id === 'petModal') {
@@ -519,7 +506,6 @@ showModal = function(id) {
     }
     originalShowModal(id);
 };
-
 // ============ PET CARD ============
 async function openPetCard(petId) {
     currentPetId = petId;
@@ -528,15 +514,10 @@ async function openPetCard(petId) {
 
     try {
         const resp = await fetch(`/api/patients/pets/${petId}`);
-        if (!resp.ok) {
-            showToast('Питомец не найден', 'error');
-            return;
-        }
+        if (!resp.ok) { showToast('Питомец не найден', 'error'); return; }
         const pet = await resp.json();
 
-        document.getElementById('petCardTitle').textContent = `${pet.name} — карточка`;
-
-        // Pet info
+        document.getElementById('petCardTitle').textContent = pet.name + ' — карточка';
         document.getElementById('petCardInfo').innerHTML = `
             <div class="pet-name">${pet.species === 'Кошка' ? '🐱' : '🐶'} ${pet.name}</div>
             <div class="pet-species">${pet.species} ${pet.breed ? '• ' + pet.breed : ''}</div>
@@ -544,35 +525,26 @@ async function openPetCard(petId) {
             <div class="info-row"><span class="label">Вес</span><span class="value">${pet.weight ? pet.weight + ' кг' : '—'}</span></div>
             <div class="info-row"><span class="label">Пол</span><span class="value">${pet.sex || '—'}</span></div>
             <div class="info-row"><span class="label">Чип</span><span class="value">${pet.chip_number || '—'}</span></div>
-            <div class="info-row"><span class="label">Заметки</span><span class="value">${pet.notes || '—'}</span></div>
             <hr style="margin:15px 0;border-color:#f0f0f0">
             <div class="info-row"><span class="label">Владелец</span><span class="value">${pet.owner.full_name}</span></div>
             <div class="info-row"><span class="label">Телефон</span><span class="value">${pet.owner.phone || '—'}</span></div>
-            <div class="info-row"><span class="label">Email</span><span class="value">${pet.owner.email || '—'}</span></div>
-            <div class="info-row"><span class="label">Мессенджер</span><span class="value">${pet.owner.messenger || '—'}</span></div>
-        `;
+            <div class="info-row"><span class="label">Email</span><span class="value">${pet.owner.email || '—'}</span></div>`;
 
-        // Visits history
         const visitsEl = document.getElementById('petVisitsList');
         if (pet.visits && pet.visits.length > 0) {
             visitsEl.innerHTML = pet.visits.map(v => `
                 <div class="data-card" onclick="openVisit(${v.id})">
                     <div class="data-card-info">
-                        <div class="title">
-                            ${v.visit_date ? new Date(v.visit_date).toLocaleDateString('ru-RU') : ''}
-                            <span class="badge badge-${v.status}">${statusLabel(v.status)}</span>
-                            <span class="badge badge-${v.visit_type}">${typeLabel(v.visit_type)}</span>
-                        </div>
+                        <div class="title">${v.visit_date ? new Date(v.visit_date).toLocaleDateString('ru-RU') : ''}
+                            <span class="badge badge-${v.visit_type}">${typeLabel(v.visit_type)}</span></div>
                         <div class="subtitle">${v.anamnesis ? v.anamnesis.substring(0, 100) + '...' : 'Без описания'}</div>
                         <div class="details">${v.weight ? 'Вес: ' + v.weight + ' кг' : ''} ${v.recommendations ? '• Есть рекомендации' : ''}</div>
                     </div>
-                </div>
-            `).join('');
+                </div>`).join('');
         } else {
             visitsEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Нет приёмов</div></div>';
         }
 
-        // Files
         const filesEl = document.getElementById('petFilesList');
         if (pet.files && pet.files.length > 0) {
             filesEl.innerHTML = pet.files.map(f => `
@@ -583,26 +555,20 @@ async function openPetCard(petId) {
                         <button onclick="downloadFile(${f.id})" title="Скачать">⬇️</button>
                         <button onclick="deleteFile(${f.id})" title="Удалить">🗑️</button>
                     </div>
-                </div>
-            `).join('');
+                </div>`).join('');
         } else {
             filesEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📎</div><div class="empty-title">Нет файлов</div></div>';
         }
 
-        // Show pet card page
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('page-petcard').classList.add('active');
-    } catch (e) {
-        showToast('Ошибка загрузки карточки', 'error');
-        console.error(e);
-    }
+    } catch (e) { showToast('Ошибка загрузки карточки', 'error'); console.error(e); }
 }
 
 function switchPetCardTab(tab) {
     document.querySelectorAll('#page-petcard .pet-tabs .tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('petHistoryTab').classList.remove('active');
     document.getElementById('petFilesTab').classList.remove('active');
-
     if (tab === 'history') {
         document.querySelectorAll('#page-petcard .pet-tabs .tab-btn')[0].classList.add('active');
         document.getElementById('petHistoryTab').classList.add('active');
@@ -620,212 +586,151 @@ function showNewVisitForPet() {
     });
 }
 
-// ============ FILES ============
-function uploadFileToPet() {
-    document.getElementById('petFileInput').click();
-}
+function uploadFileToPet() { document.getElementById('petFileInput').click(); }
 
 async function handlePetFileUpload(event) {
     const files = event.target.files;
     if (!files.length) return;
-
     for (const file of files) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('pet_id', currentPetId);
-
         try {
-            const resp = await fetch('/api/files/upload', {
-                method: 'POST',
-                body: formData
-            });
-            if (resp.ok) {
-                showToast(`Файл "${file.name}" загружен`);
-            } else {
-                const err = await resp.json();
-                showToast(err.detail || 'Ошибка загрузки', 'error');
-            }
-        } catch (e) {
-            showToast('Ошибка сети', 'error');
-        }
+            const resp = await fetch('/api/files/upload', { method: 'POST', body: formData });
+            if (resp.ok) { showToast('Файл "' + file.name + '" загружен'); }
+            else { const err = await resp.json(); showToast(err.detail || 'Ошибка загрузки', 'error'); }
+        } catch (e) { showToast('Ошибка сети', 'error'); }
     }
-
     event.target.value = '';
     openPetCard(currentPetId);
 }
 
-function downloadFile(fileId) {
-    window.open(`/api/files/download/${fileId}`, '_blank');
-}
+function downloadFile(fileId) { window.open('/api/files/download/' + fileId, '_blank'); }
 
 async function deleteFile(fileId) {
     if (!confirm('Удалить файл?')) return;
     try {
-        const resp = await fetch(`/api/files/${fileId}`, { method: 'DELETE' });
-        if (resp.ok) {
-            showToast('Файл удалён');
-            openPetCard(currentPetId);
-        }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+        const resp = await fetch('/api/files/' + fileId, { method: 'DELETE' });
+        if (resp.ok) { showToast('Файл удалён'); openPetCard(currentPetId); }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
 
 function downloadEpicrisis(format) {
     if (!currentPetId) return;
-    window.open(`/api/documents/epicrisis/${currentPetId}/${format}`, '_blank');
-}
-
-// ============ HELPERS ============
-function statusLabel(status) {
-    const map = { scheduled: 'Запланирован', completed: 'Завершён', cancelled: 'Отменён' };
-    return map[status] || status;
+    window.open('/api/documents/epicrisis/' + currentPetId + '/' + format, '_blank');
 }
 
 function typeLabel(type) {
-    const map = { primary: 'Первичный', follow_up: 'Повторный' };
+    var map = { primary: 'Первичный', follow_up: 'Повторный' };
     return map[type] || type;
 }
 
 function fileIcon(type) {
-    const map = { image: '🖼️', video: '🎥', document: '📄' };
+    var map = { image: '🖼️', video: '🎥', document: '📄' };
     return map[type] || '📎';
 }
 
 function formatDate(isoStr) {
     if (!isoStr) return '';
-    const d = new Date(isoStr);
+    var d = new Date(isoStr);
     return d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
-
 // ============ VISITS ============
 async function loadVisits() {
     try {
-        const status = document.getElementById('visitStatusFilter').value;
-        const type = document.getElementById('visitTypeFilter').value;
-        let url = '/api/visits?';
-        if (status) url += `status=${status}&`;
-        if (type) url += `visit_type=${type}&`;
+        var type = document.getElementById('visitTypeFilter').value;
+        var url = '/api/visits?';
+        if (type) url += 'visit_type=' + type + '&';
 
-        const resp = await fetch(url);
-        const visits = await resp.json();
-        const el = document.getElementById('visitsList');
+        var resp = await fetch(url);
+        var visits = await resp.json();
+        var el = document.getElementById('visitsList');
 
         if (visits.length === 0) {
             el.innerHTML = '<div class="empty-state"><div class="empty-icon">💊</div><div class="empty-title">Нет приёмов</div><div class="empty-desc">Создайте первый приём</div></div>';
             return;
         }
 
-        el.innerHTML = visits.map(v => `
-            <div class="data-card" onclick="openVisit(${v.id})">
-                <div class="data-card-info">
-                    <div class="title">
-                        ${v.pet.name} (${v.pet.species})
-                        <span class="badge badge-${v.status}">${statusLabel(v.status)}</span>
-                        <span class="badge badge-${v.visit_type}">${typeLabel(v.visit_type)}</span>
-                    </div>
-                    <div class="subtitle">${v.owner.full_name} • ${v.visit_date ? formatDate(v.visit_date) : ''}</div>
-                    <div class="details">${v.anamnesis ? v.anamnesis.substring(0, 80) + '...' : ''}</div>
-                </div>
-                <div class="data-card-actions">
-                    <button onclick="event.stopPropagation(); deleteVisit(${v.id})" title="Удалить">🗑️</button>
-                </div>
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error('Load visits error:', e);
-    }
+        el.innerHTML = visits.map(function(v) {
+            return '<div class="data-card" onclick="openVisit(' + v.id + ')">' +
+                '<div class="data-card-info">' +
+                '<div class="title">' + v.pet.name + ' (' + v.pet.species + ') ' +
+                '<span class="badge badge-' + v.visit_type + '">' + typeLabel(v.visit_type) + '</span></div>' +
+                '<div class="subtitle">' + v.owner.full_name + ' • ' + (v.visit_date ? formatDate(v.visit_date) : '') + '</div>' +
+                '<div class="details">' + (v.anamnesis ? v.anamnesis.substring(0, 80) + '...' : '') + '</div>' +
+                '</div>' +
+                '<div class="data-card-actions">' +
+                '<button onclick="event.stopPropagation(); deleteVisit(' + v.id + ')" title="Удалить">🗑️</button>' +
+                '</div></div>';
+        }).join('');
+    } catch (e) { console.error('Load visits error:', e); }
 }
 
 async function loadPetSelect() {
     try {
-        const resp = await fetch('/api/patients/pets');
-        const pets = await resp.json();
-        const selects = ['visitPetSelect', 'slotPetSelect'];
-        selects.forEach(selectId => {
-            const el = document.getElementById(selectId);
+        var resp = await fetch('/api/patients/pets');
+        var pets = await resp.json();
+        var selects = ['visitPetSelect', 'slotPetSelect'];
+        selects.forEach(function(selectId) {
+            var el = document.getElementById(selectId);
             if (el) {
-                const emptyOption = selectId === 'slotPetSelect' ?
+                var emptyOption = selectId === 'slotPetSelect' ?
                     '<option value="">— Свободный слот —</option>' :
                     '<option value="">Выберите питомца...</option>';
                 el.innerHTML = emptyOption +
-                    pets.map(p => `<option value="${p.id}">${p.name} (${p.species}) — ${p.owner.full_name}</option>`).join('');
+                    pets.map(function(p) {
+                        return '<option value="' + p.id + '">' + p.name + ' (' + p.species + ') — ' + p.owner.full_name + '</option>';
+                    }).join('');
             }
         });
-    } catch (e) {
-        console.error(e);
-    }
+    } catch (e) { console.error(e); }
 }
 
 async function openVisit(visitId) {
     try {
-        const resp = await fetch(`/api/visits/${visitId}`);
+        var resp = await fetch('/api/visits/' + visitId);
         if (!resp.ok) return;
-        const v = await resp.json();
+        var v = await resp.json();
 
         await loadPetSelect();
 
         document.getElementById('visitEditId').value = v.id;
         document.getElementById('visitPetSelect').value = v.pet.id;
         document.getElementById('visitType').value = v.visit_type;
-        document.getElementById('visitStatus').value = v.status;
         document.getElementById('visitWeight').value = v.weight || '';
-        document.getElementById('visitTemp').value = v.temperature || '';
         document.getElementById('visitAnamnesis').value = v.anamnesis || '';
         document.getElementById('visitRecommendations').value = v.recommendations || '';
         document.getElementById('visitNotes').value = v.notes || '';
-
-        if (v.visit_date) {
-            const dt = new Date(v.visit_date);
-            const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-            document.getElementById('visitDate').value = local;
-        }
-
-        // Show header info
-        document.getElementById('visitHeaderInfo').innerHTML = `
-            <strong>${v.pet.name}</strong> (${v.pet.species} ${v.pet.breed || ''}) —
-            Владелец: ${v.owner.full_name} ${v.owner.phone || ''}
-        `;
-
-        // Show doc buttons
+        document.getElementById('visitHeaderInfo').innerHTML =
+            '<strong>' + v.pet.name + '</strong> (' + v.pet.species + ' ' + (v.pet.breed || '') + ') — Владелец: ' + v.owner.full_name + ' ' + (v.owner.phone || '');
         document.getElementById('btnVisitPdf').style.display = 'inline-flex';
         document.getElementById('btnVisitDocx').style.display = 'inline-flex';
         document.getElementById('visitModalTitle').textContent = 'Редактировать приём';
-
         showModal('visitModal');
-    } catch (e) {
-        showToast('Ошибка загрузки приёма', 'error');
-    }
+    } catch (e) { showToast('Ошибка загрузки приёма', 'error'); }
 }
 
 async function saveVisit() {
-    const editId = document.getElementById('visitEditId').value;
-    const data = {
+    var editId = document.getElementById('visitEditId').value;
+    var data = {
         pet_id: parseInt(document.getElementById('visitPetSelect').value),
         visit_type: document.getElementById('visitType').value,
-        status: document.getElementById('visitStatus').value,
         weight: parseFloat(document.getElementById('visitWeight').value) || null,
-        temperature: parseFloat(document.getElementById('visitTemp').value) || null,
         anamnesis: document.getElementById('visitAnamnesis').value,
         recommendations: document.getElementById('visitRecommendations').value,
-        notes: document.getElementById('visitNotes').value,
-        visit_date: document.getElementById('visitDate').value || null
+        notes: document.getElementById('visitNotes').value
     };
 
-    if (!data.pet_id) {
-        showToast('Выберите питомца', 'error');
-        return;
-    }
+    if (!data.pet_id) { showToast('Выберите питомца', 'error'); return; }
 
     try {
-        const url = editId ? `/api/visits/${editId}` : '/api/visits';
-        const method = editId ? 'PUT' : 'POST';
-        const resp = await fetch(url, {
-            method,
+        var url = editId ? '/api/visits/' + editId : '/api/visits';
+        var method = editId ? 'PUT' : 'POST';
+        var resp = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (resp.ok) {
             showToast(editId ? 'Приём обновлён' : 'Приём создан');
             closeModal('visitModal');
@@ -833,138 +738,111 @@ async function saveVisit() {
             loadVisits();
             if (currentPetId) openPetCard(currentPetId);
         } else {
-            const err = await resp.json();
+            var err = await resp.json();
             showToast(err.detail || 'Ошибка', 'error');
         }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
 
 async function deleteVisit(id) {
     if (!confirm('Удалить приём?')) return;
     try {
-        const resp = await fetch(`/api/visits/${id}`, { method: 'DELETE' });
-        if (resp.ok) {
-            showToast('Приём удалён');
-            loadVisits();
-        }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+        var resp = await fetch('/api/visits/' + id, { method: 'DELETE' });
+        if (resp.ok) { showToast('Приём удалён'); loadVisits(); }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
 
 function clearVisitForm() {
     document.getElementById('visitEditId').value = '';
     document.getElementById('visitType').value = 'primary';
-    document.getElementById('visitStatus').value = 'scheduled';
     document.getElementById('visitWeight').value = '';
-    document.getElementById('visitTemp').value = '';
     document.getElementById('visitAnamnesis').value = '';
     document.getElementById('visitRecommendations').value = '';
     document.getElementById('visitNotes').value = '';
-    document.getElementById('visitDate').value = '';
     document.getElementById('visitHeaderInfo').innerHTML = '';
     document.getElementById('btnVisitPdf').style.display = 'none';
     document.getElementById('btnVisitDocx').style.display = 'none';
     document.getElementById('visitModalTitle').textContent = 'Новый приём';
 }
 
-function onVisitPetChange() {
-    // Could load pet info here
-}
+function onVisitPetChange() {}
 
 function downloadVisitDoc(format) {
-    const visitId = document.getElementById('visitEditId').value;
+    var visitId = document.getElementById('visitEditId').value;
     if (!visitId) return;
-    window.open(`/api/documents/visit/${visitId}/${format}`, '_blank');
+    window.open('/api/documents/visit/' + visitId + '/' + format, '_blank');
 }
 
 // ============ CALENDAR ============
 function getMonday(d) {
-    const date = new Date(d);
-    const day = date.getDay();
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    var date = new Date(d);
+    var day = date.getDay();
+    var diff = date.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(date.setDate(diff));
 }
 
-function formatDateStr(d) {
-    return d.toISOString().split('T')[0];
-}
+function formatDateStr(d) { return d.toISOString().split('T')[0]; }
 
-const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+var dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+var monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
 async function loadCalendar() {
-    if (!calendarWeekStart) {
-        calendarWeekStart = getMonday(new Date());
-    }
+    if (!calendarWeekStart) { calendarWeekStart = getMonday(new Date()); }
 
-    const weekEnd = new Date(calendarWeekStart);
+    var weekEnd = new Date(calendarWeekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
 
     document.getElementById('calendarTitle').textContent =
-        `${calendarWeekStart.getDate()} ${monthNames[calendarWeekStart.getMonth()]} — ${weekEnd.getDate()} ${monthNames[weekEnd.getMonth()]} ${weekEnd.getFullYear()}`;
+        calendarWeekStart.getDate() + ' ' + monthNames[calendarWeekStart.getMonth()] + ' — ' +
+        weekEnd.getDate() + ' ' + monthNames[weekEnd.getMonth()] + ' ' + weekEnd.getFullYear();
 
     try {
-        const resp = await fetch(`/api/calendar?week=${formatDateStr(calendarWeekStart)}`);
-        const data = await resp.json();
+        var resp = await fetch('/api/calendar?week=' + formatDateStr(calendarWeekStart));
+        var data = await resp.json();
+        var workStart = data.work_start || 9;
+        var workEnd = data.work_end || 21;
 
-        const workStart = data.work_start || 9;
-        const workEnd = data.work_end || 21;
+        var slotsMap = {};
+        data.slots.forEach(function(s) { slotsMap[s.date + '_' + s.hour] = s; });
 
-        // Build slots map
-        const slotsMap = {};
-        data.slots.forEach(s => {
-            const key = `${s.date}_${s.hour}`;
-            slotsMap[key] = s;
-        });
+        var today = new Date().toISOString().split('T')[0];
 
-        const today = new Date().toISOString().split('T')[0];
-
-        // Header
-        let html = '<div class="calendar-header-row">';
+        var html = '<div class="calendar-header-row">';
         html += '<div class="calendar-header-cell time-col">Время</div>';
-        for (let d = 0; d < 7; d++) {
-            const date = new Date(calendarWeekStart);
+        for (var d = 0; d < 7; d++) {
+            var date = new Date(calendarWeekStart);
             date.setDate(date.getDate() + d);
-            const dateStr = formatDateStr(date);
-            const isToday = dateStr === today;
-            html += `<div class="calendar-header-cell ${isToday ? 'today' : ''}">
-                <div class="day-name">${dayNames[d]}</div>
-                <div class="day-num">${date.getDate()}</div>
-            </div>`;
+            var dateStr = formatDateStr(date);
+            var isToday = dateStr === today;
+            html += '<div class="calendar-header-cell ' + (isToday ? 'today' : '') + '">' +
+                '<div class="day-name">' + dayNames[d] + '</div>' +
+                '<div class="day-num">' + date.getDate() + '</div></div>';
         }
         html += '</div>';
 
-        // Body
         html += '<div class="calendar-body">';
-        for (let h = workStart; h < workEnd; h++) {
+        for (var h = workStart; h < workEnd; h++) {
             html += '<div class="calendar-row">';
-            html += `<div class="calendar-time">${h}:00</div>`;
+            html += '<div class="calendar-time">' + h + ':00</div>';
 
-            for (let d = 0; d < 7; d++) {
-                const date = new Date(calendarWeekStart);
-                date.setDate(date.getDate() + d);
-                const dateStr = formatDateStr(date);
-                const key = `${dateStr}_${h}`;
-                const slot = slotsMap[key];
+            for (var d2 = 0; d2 < 7; d2++) {
+                var date2 = new Date(calendarWeekStart);
+                date2.setDate(date2.getDate() + d2);
+                var dateStr2 = formatDateStr(date2);
+                var key = dateStr2 + '_' + h;
+                var slot = slotsMap[key];
 
                 if (slot) {
-                    const statusClass = slot.status === 'completed' ? 'slot-completed' :
-                                       slot.status === 'cancelled' ? 'slot-cancelled' : '';
-                    html += `<div class="calendar-cell has-slot" onclick="openSlot('${dateStr}', ${h}, ${slot.id})">`;
+                    html += '<div class="calendar-cell has-slot" onclick="openSlot(\'' + dateStr2 + '\',' + h + ',' + slot.id + ')">';
                     if (slot.pet) {
-                        html += `<div class="calendar-slot ${statusClass}">
-                            <div class="slot-pet">${slot.pet.name}</div>
-                            <div class="slot-owner">${slot.pet.owner_name}</div>
-                        </div>`;
+                        html += '<div class="calendar-slot"><div class="slot-pet">' + slot.pet.name + '</div>' +
+                            '<div class="slot-owner">' + slot.pet.owner_name + '</div></div>';
                     } else {
-                        html += `<div class="calendar-slot slot-free">Свободно</div>`;
+                        html += '<div class="calendar-slot slot-free">Свободно</div>';
                     }
                     html += '</div>';
                 } else {
-                    html += `<div class="calendar-cell" onclick="openSlot('${dateStr}', ${h}, null)"></div>`;
+                    html += '<div class="calendar-cell" onclick="openSlot(\'' + dateStr2 + '\',' + h + ',null)"></div>';
                 }
             }
             html += '</div>';
@@ -972,42 +850,26 @@ async function loadCalendar() {
         html += '</div>';
 
         document.getElementById('calendarGrid').innerHTML = html;
-    } catch (e) {
-        console.error('Calendar error:', e);
-    }
+    } catch (e) { console.error('Calendar error:', e); }
 }
 
-function calendarPrev() {
-    calendarWeekStart.setDate(calendarWeekStart.getDate() - 7);
-    loadCalendar();
-}
-
-function calendarNext() {
-    calendarWeekStart.setDate(calendarWeekStart.getDate() + 7);
-    loadCalendar();
-}
-
-function calendarToday() {
-    calendarWeekStart = getMonday(new Date());
-    loadCalendar();
-}
+function calendarPrev() { calendarWeekStart.setDate(calendarWeekStart.getDate() - 7); loadCalendar(); }
+function calendarNext() { calendarWeekStart.setDate(calendarWeekStart.getDate() + 7); loadCalendar(); }
+function calendarToday() { calendarWeekStart = getMonday(new Date()); loadCalendar(); }
 
 async function openSlot(dateStr, hour, slotId) {
     await loadPetSelect();
-
     document.getElementById('slotDate').value = dateStr;
     document.getElementById('slotHour').value = hour;
-    document.getElementById('slotModalTitle').textContent = `${dateStr} — ${hour}:00`;
+    document.getElementById('slotModalTitle').textContent = dateStr + ' — ' + hour + ':00';
 
     if (slotId) {
         document.getElementById('slotEditId').value = slotId;
         document.getElementById('btnDeleteSlot').style.display = 'inline-flex';
-
-        // Find slot data from calendar
         try {
-            const resp = await fetch(`/api/calendar?week=${dateStr}`);
-            const data = await resp.json();
-            const slot = data.slots.find(s => s.id === slotId);
+            var resp = await fetch('/api/calendar?week=' + dateStr);
+            var data = await resp.json();
+            var slot = data.slots.find(function(s) { return s.id === slotId; });
             if (slot) {
                 document.getElementById('slotPetSelect').value = slot.pet ? slot.pet.id : '';
                 document.getElementById('slotNotes').value = slot.notes || '';
@@ -1019,85 +881,71 @@ async function openSlot(dateStr, hour, slotId) {
         document.getElementById('slotNotes').value = '';
         document.getElementById('btnDeleteSlot').style.display = 'none';
     }
-
     showModal('calendarSlotModal');
 }
 
 async function saveSlot() {
-    const editId = document.getElementById('slotEditId').value;
-    const data = {
+    var editId = document.getElementById('slotEditId').value;
+    var data = {
         date: document.getElementById('slotDate').value,
         hour: parseInt(document.getElementById('slotHour').value),
         pet_id: parseInt(document.getElementById('slotPetSelect').value) || null,
         notes: document.getElementById('slotNotes').value
     };
-
     try {
-        const url = editId ? `/api/calendar/${editId}` : '/api/calendar';
-        const method = editId ? 'PUT' : 'POST';
-        const resp = await fetch(url, {
-            method,
+        var url = editId ? '/api/calendar/' + editId : '/api/calendar';
+        var method = editId ? 'PUT' : 'POST';
+        var resp = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (resp.ok) {
             showToast(editId ? 'Запись обновлена' : 'Запись создана');
             closeModal('calendarSlotModal');
             loadCalendar();
         } else {
-            const err = await resp.json();
+            var err = await resp.json();
             showToast(err.detail || 'Ошибка', 'error');
         }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
 
 async function deleteSlot() {
-    const slotId = document.getElementById('slotEditId').value;
+    var slotId = document.getElementById('slotEditId').value;
     if (!slotId) return;
     if (!confirm('Удалить запись?')) return;
-
     try {
-        const resp = await fetch(`/api/calendar/${slotId}`, { method: 'DELETE' });
-        if (resp.ok) {
-            showToast('Запись удалена');
-            closeModal('calendarSlotModal');
-            loadCalendar();
-        }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+        var resp = await fetch('/api/calendar/' + slotId, { method: 'DELETE' });
+        if (resp.ok) { showToast('Запись удалена'); closeModal('calendarSlotModal'); loadCalendar(); }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
-
 // ============ TEMPLATES ============
 async function loadCategories() {
     try {
-        const resp = await fetch('/api/templates/categories');
-        const categories = await resp.json();
+        var resp = await fetch('/api/templates/categories');
+        var categories = await resp.json();
+        var el = document.getElementById('categoriesList');
 
-        const el = document.getElementById('categoriesList');
-        let html = `<div class="category-item ${!selectedCategoryId ? 'active' : ''}" onclick="filterByCategory(null)">📁 Все шаблоны</div>`;
-        html += categories.map(c => `
-            <div class="category-item ${selectedCategoryId === c.id ? 'active' : ''}" onclick="filterByCategory(${c.id})">
-                📂 ${c.name} <span style="color:#aaa;font-size:12px">(${c.templates_count})</span>
-            </div>
-        `).join('');
+        var html = '<div class="category-item ' + (!selectedCategoryId ? 'active' : '') +
+            '" onclick="filterByCategory(null)">📁 Все шаблоны</div>';
+        categories.forEach(function(c) {
+            html += '<div class="category-item ' + (selectedCategoryId === c.id ? 'active' : '') +
+                '" onclick="filterByCategory(' + c.id + ')">📂 ' + c.name +
+                ' <span style="color:#aaa;font-size:12px">(' + c.templates_count + ')</span></div>';
+        });
         el.innerHTML = html;
 
-        // Update category selects
-        const catSelects = ['templateCategory', 'categoryParent'];
-        catSelects.forEach(selectId => {
-            const sel = document.getElementById(selectId);
+        ['templateCategory', 'categoryParent'].forEach(function(selectId) {
+            var sel = document.getElementById(selectId);
             if (sel) {
                 sel.innerHTML = '<option value="">Без категории</option>' +
-                    categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                    categories.map(function(c) {
+                        return '<option value="' + c.id + '">' + c.name + '</option>';
+                    }).join('');
             }
         });
-    } catch (e) {
-        console.error(e);
-    }
+    } catch (e) { console.error(e); }
 }
 
 function filterByCategory(categoryId) {
@@ -1106,61 +954,53 @@ function filterByCategory(categoryId) {
     loadTemplates();
 }
 
-async function loadTemplates(search = '') {
+async function loadTemplates(search) {
+    search = search || '';
     try {
-        let url = '/api/templates?';
-        if (selectedCategoryId) url += `category_id=${selectedCategoryId}&`;
-        if (search) url += `search=${encodeURIComponent(search)}&`;
+        var url = '/api/templates?';
+        if (selectedCategoryId) url += 'category_id=' + selectedCategoryId + '&';
+        if (search) url += 'search=' + encodeURIComponent(search) + '&';
 
-        const resp = await fetch(url);
+        var resp = await fetch(url);
         allTemplates = await resp.json();
-        const el = document.getElementById('templatesList');
+        var el = document.getElementById('templatesList');
 
         if (allTemplates.length === 0) {
             el.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-title">Нет шаблонов</div></div>';
             return;
         }
 
-        el.innerHTML = allTemplates.map(t => `
-            <div class="template-card" onclick="editTemplate(${t.id})">
-                <div class="template-title">${t.title}</div>
-                <div class="template-preview">${t.content.substring(0, 100)}...</div>
-                <div style="margin-top:8px">
-                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteTemplate(${t.id})">🗑️</button>
-                </div>
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error(e);
-    }
+        el.innerHTML = allTemplates.map(function(t) {
+            return '<div class="template-card" onclick="editTemplate(' + t.id + ')">' +
+                '<div class="template-title">' + t.title + '</div>' +
+                '<div class="template-preview">' + t.content.substring(0, 100) + '...</div>' +
+                '<div style="margin-top:8px"><button class="btn btn-sm btn-danger" ' +
+                'onclick="event.stopPropagation(); deleteTemplate(' + t.id + ')">🗑️</button></div></div>';
+        }).join('');
+    } catch (e) { console.error(e); }
 }
 
-function searchTemplates(query) {
-    loadTemplates(query);
-}
+function searchTemplates(query) { loadTemplates(query); }
 
 async function saveTemplate() {
-    const editId = document.getElementById('templateEditId').value;
-    const data = {
+    var editId = document.getElementById('templateEditId').value;
+    var data = {
         category_id: parseInt(document.getElementById('templateCategory').value) || null,
         title: document.getElementById('templateTitle').value,
         content: document.getElementById('templateContent').value
     };
-
     if (!data.title || !data.content) {
         showToast('Название и содержание обязательны', 'error');
         return;
     }
-
     try {
-        const url = editId ? `/api/templates/${editId}` : '/api/templates';
-        const method = editId ? 'PUT' : 'POST';
-        const resp = await fetch(url, {
-            method,
+        var url = editId ? '/api/templates/' + editId : '/api/templates';
+        var method = editId ? 'PUT' : 'POST';
+        var resp = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (resp.ok) {
             showToast(editId ? 'Шаблон обновлён' : 'Шаблон создан');
             closeModal('templateModal');
@@ -1168,18 +1008,15 @@ async function saveTemplate() {
             loadTemplates();
             loadCategories();
         } else {
-            const err = await resp.json();
+            var err = await resp.json();
             showToast(err.detail || 'Ошибка', 'error');
         }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
 
 async function editTemplate(id) {
-    const template = allTemplates.find(t => t.id === id);
+    var template = allTemplates.find(function(t) { return t.id === id; });
     if (!template) return;
-
     document.getElementById('templateEditId').value = template.id;
     document.getElementById('templateCategory').value = template.category_id || '';
     document.getElementById('templateTitle').value = template.title;
@@ -1191,15 +1028,9 @@ async function editTemplate(id) {
 async function deleteTemplate(id) {
     if (!confirm('Удалить шаблон?')) return;
     try {
-        const resp = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
-        if (resp.ok) {
-            showToast('Шаблон удалён');
-            loadTemplates();
-            loadCategories();
-        }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+        var resp = await fetch('/api/templates/' + id, { method: 'DELETE' });
+        if (resp.ok) { showToast('Шаблон удалён'); loadTemplates(); loadCategories(); }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
 
 function clearTemplateForm() {
@@ -1210,74 +1041,62 @@ function clearTemplateForm() {
     document.getElementById('templateModalTitle').textContent = 'Новый шаблон';
 }
 
-// Template selector (in visit modal)
 async function showTemplateSelector() {
     try {
-        const resp = await fetch('/api/templates');
+        var resp = await fetch('/api/templates');
         allTemplates = await resp.json();
         renderTemplateSelector(allTemplates);
         showModal('templateSelectorModal');
-    } catch (e) {
-        showToast('Ошибка загрузки шаблонов', 'error');
-    }
+    } catch (e) { showToast('Ошибка загрузки шаблонов', 'error'); }
 }
 
 function renderTemplateSelector(templates) {
-    const el = document.getElementById('templateSelectorList');
+    var el = document.getElementById('templateSelectorList');
     if (templates.length === 0) {
         el.innerHTML = '<div class="empty-state"><div class="empty-title">Нет шаблонов</div></div>';
         return;
     }
-    el.innerHTML = templates.map(t => `
-        <div class="template-selector-item" onclick="insertTemplate(${t.id})">
-            <div class="ts-title">${t.title}</div>
-            <div class="ts-preview">${t.content.substring(0, 80)}...</div>
-        </div>
-    `).join('');
+    el.innerHTML = templates.map(function(t) {
+        return '<div class="template-selector-item" onclick="insertTemplate(' + t.id + ')">' +
+            '<div class="ts-title">' + t.title + '</div>' +
+            '<div class="ts-preview">' + t.content.substring(0, 80) + '...</div></div>';
+    }).join('');
 }
 
 function filterTemplateSelector(query) {
-    const filtered = allTemplates.filter(t =>
-        t.title.toLowerCase().includes(query.toLowerCase()) ||
-        t.content.toLowerCase().includes(query.toLowerCase())
-    );
+    var filtered = allTemplates.filter(function(t) {
+        return t.title.toLowerCase().includes(query.toLowerCase()) ||
+            t.content.toLowerCase().includes(query.toLowerCase());
+    });
     renderTemplateSelector(filtered);
 }
 
 function insertTemplate(id) {
-    const template = allTemplates.find(t => t.id === id);
+    var template = allTemplates.find(function(t) { return t.id === id; });
     if (!template) return;
-
-    const textarea = document.getElementById('visitRecommendations');
-    const current = textarea.value;
+    var textarea = document.getElementById('visitRecommendations');
+    var current = textarea.value;
     textarea.value = current ? current + '\n\n' + template.content : template.content;
-
     closeModal('templateSelectorModal');
     showToast('Шаблон вставлен');
 }
 
 // ============ CATEGORIES ============
 async function saveCategory() {
-    const editId = document.getElementById('categoryEditId').value;
-    const data = {
+    var editId = document.getElementById('categoryEditId').value;
+    var data = {
         name: document.getElementById('categoryName').value,
         parent_id: parseInt(document.getElementById('categoryParent').value) || null
     };
-
-    if (!data.name) {
-        showToast('Название обязательно', 'error');
-        return;
-    }
-
+    if (!data.name) { showToast('Название обязательно', 'error'); return; }
     try {
-        const url = editId ? `/api/templates/categories/${editId}` : '/api/templates/categories';
-        const method = editId ? 'PUT' : 'POST';
-        const resp = await fetch(url, {
-            method,
+        var url = editId ? '/api/templates/categories/' + editId : '/api/templates/categories';
+        var method = editId ? 'PUT' : 'POST';
+        var resp = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (resp.ok) {
             showToast(editId ? 'Категория обновлена' : 'Категория создана');
             closeModal('categoryModal');
@@ -1285,78 +1104,67 @@ async function saveCategory() {
             document.getElementById('categoryName').value = '';
             loadCategories();
         } else {
-            const err = await resp.json();
+            var err = await resp.json();
             showToast(err.detail || 'Ошибка', 'error');
         }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
 
 // ============ QUESTIONNAIRES ============
 async function loadQuestionnaires() {
     try {
-        const resp = await fetch('/api/questionnaires');
-        const questionnaires = await resp.json();
-        const el = document.getElementById('questionnairesList');
+        var resp = await fetch('/api/questionnaires');
+        var qs = await resp.json();
+        var el = document.getElementById('questionnairesList');
 
-        if (questionnaires.length === 0) {
-            el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Нет опросников</div><div class="empty-desc">Создайте опросник для клиентов</div></div>';
+        if (qs.length === 0) {
+            el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>' +
+                '<div class="empty-title">Нет опросников</div>' +
+                '<div class="empty-desc">Создайте опросник для клиентов</div></div>';
             return;
         }
 
-        el.innerHTML = questionnaires.map(q => `
-            <div class="data-card">
-                <div class="data-card-info">
-                    <div class="title">📋 ${q.title}</div>
-                    <div class="subtitle">${q.description || ''} • Полей: ${q.fields_count}</div>
-                    <div class="details">
-                        ${q.is_active ? '🟢 Активен' : '🔴 Деактивирован'}
-                        • Создан: ${q.created_at ? new Date(q.created_at).toLocaleDateString('ru-RU') : ''}
-                    </div>
-                    <div class="link-display">
-                        <input type="text" value="${window.location.origin}/intake/${q.public_link}" readonly id="link_${q.id}">
-                        <button onclick="copyLink('link_${q.id}')">📋 Копировать</button>
-                    </div>
-                </div>
-                <div class="data-card-actions">
-                    <button onclick="event.stopPropagation(); toggleQuestionnaire(${q.id}, ${!q.is_active})" title="${q.is_active ? 'Деактивировать' : 'Активировать'}">${q.is_active ? '⏸️' : '▶️'}</button>
-                    <button onclick="event.stopPropagation(); deleteQuestionnaire(${q.id})" title="Удалить">🗑️</button>
-                </div>
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error(e);
-    }
+        el.innerHTML = qs.map(function(q) {
+            return '<div class="data-card"><div class="data-card-info">' +
+                '<div class="title">📋 ' + q.title + '</div>' +
+                '<div class="subtitle">' + (q.description || '') + ' • Полей: ' + q.fields_count + '</div>' +
+                '<div class="details">' + (q.is_active ? '🟢 Активен' : '🔴 Деактивирован') +
+                ' • Создан: ' + (q.created_at ? new Date(q.created_at).toLocaleDateString('ru-RU') : '') + '</div>' +
+                '<div class="link-display">' +
+                '<input type="text" value="' + window.location.origin + '/intake/' + q.public_link + '" readonly id="link_' + q.id + '">' +
+                '<button onclick="copyLink(\'link_' + q.id + '\')">📋 Копировать</button></div>' +
+                '</div><div class="data-card-actions">' +
+                '<button onclick="event.stopPropagation(); toggleQuestionnaire(' + q.id + ',' + !q.is_active + ')" ' +
+                'title="' + (q.is_active ? 'Деактивировать' : 'Активировать') + '">' +
+                (q.is_active ? '⏸️' : '▶️') + '</button>' +
+                '<button onclick="event.stopPropagation(); deleteQuestionnaire(' + q.id + ')" title="Удалить">🗑️</button>' +
+                '</div></div>';
+        }).join('');
+    } catch (e) { console.error(e); }
 }
 
 function copyLink(inputId) {
-    const input = document.getElementById(inputId);
+    var input = document.getElementById(inputId);
     input.select();
     document.execCommand('copy');
     showToast('Ссылка скопирована!');
 }
 
 async function saveQuestionnaire() {
-    const data = {
+    var data = {
         title: document.getElementById('questionnaireName').value,
         description: document.getElementById('questionnaireDesc').value,
         fields: []
     };
+    if (!data.title) { showToast('Название обязательно', 'error'); return; }
 
-    if (!data.title) {
-        showToast('Название обязательно', 'error');
-        return;
-    }
-
-    // Собираем кастомные поля
-    document.querySelectorAll('#questionnaireFields .q-field-row').forEach((row, i) => {
-        const label = row.querySelector('.q-field-label').value;
-        const type = row.querySelector('.q-field-type').value;
-        const required = row.querySelector('.q-field-required').checked;
+    document.querySelectorAll('#questionnaireFields .q-field-row').forEach(function(row, i) {
+        var label = row.querySelector('.q-field-label').value;
+        var type = row.querySelector('.q-field-type').value;
+        var required = row.querySelector('.q-field-required').checked;
         if (label) {
             data.fields.push({
-                field_name: `custom_${i}`,
+                field_name: 'custom_' + i,
                 field_label: label,
                 field_type: type,
                 is_required: required,
@@ -1366,12 +1174,11 @@ async function saveQuestionnaire() {
     });
 
     try {
-        const resp = await fetch('/api/questionnaires', {
+        var resp = await fetch('/api/questionnaires', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (resp.ok) {
             showToast('Опросник создан');
             closeModal('questionnaireModal');
@@ -1380,35 +1187,30 @@ async function saveQuestionnaire() {
             document.getElementById('questionnaireFields').innerHTML = '';
             loadQuestionnaires();
         } else {
-            const err = await resp.json();
+            var err = await resp.json();
             showToast(err.detail || 'Ошибка', 'error');
         }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
 
 function addQuestionnaireField() {
-    const container = document.getElementById('questionnaireFields');
-    const row = document.createElement('div');
+    var container = document.getElementById('questionnaireFields');
+    var row = document.createElement('div');
     row.className = 'q-field-row';
-    row.innerHTML = `
-        <input type="text" class="q-field-label" placeholder="Название поля">
-        <select class="q-field-type">
-            <option value="text">Текст</option>
-            <option value="textarea">Многострочный</option>
-            <option value="number">Число</option>
-            <option value="select">Выпадающий</option>
-        </select>
-        <label><input type="checkbox" class="q-field-required"> Обяз.</label>
-        <button class="q-field-remove" onclick="this.parentElement.remove()">✕</button>
-    `;
+    row.innerHTML = '<input type="text" class="q-field-label" placeholder="Название поля">' +
+        '<select class="q-field-type">' +
+        '<option value="text">Текст</option>' +
+        '<option value="textarea">Многострочный</option>' +
+        '<option value="number">Число</option>' +
+        '<option value="select">Выпадающий</option></select>' +
+        '<label><input type="checkbox" class="q-field-required"> Обяз.</label>' +
+        '<button class="q-field-remove" onclick="this.parentElement.remove()">✕</button>';
     container.appendChild(row);
 }
 
 async function toggleQuestionnaire(id, active) {
     try {
-        const resp = await fetch(`/api/questionnaires/${id}`, {
+        var resp = await fetch('/api/questionnaires/' + id, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ is_active: active })
@@ -1417,29 +1219,23 @@ async function toggleQuestionnaire(id, active) {
             showToast(active ? 'Опросник активирован' : 'Опросник деактивирован');
             loadQuestionnaires();
         }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
 
 async function deleteQuestionnaire(id) {
     if (!confirm('Удалить опросник?')) return;
     try {
-        const resp = await fetch(`/api/questionnaires/${id}`, { method: 'DELETE' });
-        if (resp.ok) {
-            showToast('Опросник удалён');
-            loadQuestionnaires();
-        }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+        var resp = await fetch('/api/questionnaires/' + id, { method: 'DELETE' });
+        if (resp.ok) { showToast('Опросник удалён'); loadQuestionnaires(); }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
 
 function switchQTab(tab) {
-    document.querySelectorAll('#page-questionnaires .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#page-questionnaires .tab-btn').forEach(function(b) {
+        b.classList.remove('active');
+    });
     document.getElementById('qFormsTab').classList.remove('active');
     document.getElementById('qResponsesTab').classList.remove('active');
-
     if (tab === 'forms') {
         document.querySelectorAll('#page-questionnaires .tab-btn')[0].classList.add('active');
         document.getElementById('qFormsTab').classList.add('active');
@@ -1453,207 +1249,179 @@ function switchQTab(tab) {
 // ============ INTAKES ============
 async function loadIntakes() {
     try {
-        const resp = await fetch('/api/intake');
-        const intakes = await resp.json();
-        const el = document.getElementById('intakesList');
+        var resp = await fetch('/api/intake');
+        var intakes = await resp.json();
+        var el = document.getElementById('intakesList');
 
         if (intakes.length === 0) {
-            el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Нет заполненных анкет</div></div>';
+            el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>' +
+                '<div class="empty-title">Нет заполненных анкет</div></div>';
             return;
         }
 
-        el.innerHTML = intakes.map(i => `
-            <div class="data-card" onclick="viewIntake(${i.id})">
-                <div class="data-card-info">
-                    <div class="title">
-                        ${i.pet_name} (${i.pet_species})
-                        <span class="badge badge-${i.status}">${intakeStatusLabel(i.status)}</span>
-                    </div>
-                    <div class="subtitle">Владелец: ${i.owner_name} • ${i.owner_phone || ''}</div>
-                    <div class="details">${i.created_at ? formatDate(i.created_at) : ''} • ${i.questionnaire_title}</div>
-                </div>
-                <div class="data-card-actions">
-                    <button onclick="event.stopPropagation(); deleteIntake(${i.id})" title="Удалить">🗑️</button>
-                </div>
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error(e);
-    }
+        el.innerHTML = intakes.map(function(i) {
+            return '<div class="data-card" onclick="viewIntake(' + i.id + ')">' +
+                '<div class="data-card-info">' +
+                '<div class="title">' + i.pet_name + ' (' + i.pet_species + ') ' +
+                '<span class="badge badge-' + i.status + '">' + intakeStatusLabel(i.status) + '</span></div>' +
+                '<div class="subtitle">Владелец: ' + i.owner_name + ' • ' + (i.owner_phone || '') + '</div>' +
+                '<div class="details">' + (i.created_at ? formatDate(i.created_at) : '') +
+                ' • ' + i.questionnaire_title + '</div></div>' +
+                '<div class="data-card-actions">' +
+                '<button onclick="event.stopPropagation(); deleteIntake(' + i.id + ')" title="Удалить">🗑️</button>' +
+                '</div></div>';
+        }).join('');
+    } catch (e) { console.error(e); }
 }
 
 function intakeStatusLabel(status) {
-    const map = { new: 'Новая', reviewed: 'Просмотрена', converted: 'Конвертирована' };
+    var map = { 'new': 'Новая', reviewed: 'Просмотрена', converted: 'Конвертирована' };
     return map[status] || status;
 }
 
 async function viewIntake(id) {
     currentIntakeId = id;
     try {
-        const resp = await fetch(`/api/intake/${id}`);
+        var resp = await fetch('/api/intake/' + id);
         if (!resp.ok) return;
-        const intake = await resp.json();
+        var intake = await resp.json();
 
-        let html = '<div class="intake-detail">';
+        var html = '<div class="intake-detail">';
         html += '<div class="intake-section"><h4>👤 Владелец</h4>';
-        html += `<div class="intake-row"><span class="intake-label">ФИО</span><span class="intake-value">${intake.owner_name}</span></div>`;
-        html += `<div class="intake-row"><span class="intake-label">Телефон</span><span class="intake-value">${intake.owner_phone || '—'}</span></div>`;
-        html += `<div class="intake-row"><span class="intake-label">Email</span><span class="intake-value">${intake.owner_email || '—'}</span></div>`;
+        html += '<div class="intake-row"><span class="intake-label">ФИО</span><span class="intake-value">' + intake.owner_name + '</span></div>';
+        html += '<div class="intake-row"><span class="intake-label">Телефон</span><span class="intake-value">' + (intake.owner_phone || '—') + '</span></div>';
+        html += '<div class="intake-row"><span class="intake-label">Email</span><span class="intake-value">' + (intake.owner_email || '—') + '</span></div>';
         html += '</div>';
 
         html += '<div class="intake-section"><h4>🐾 Питомец</h4>';
-        html += `<div class="intake-row"><span class="intake-label">Кличка</span><span class="intake-value">${intake.pet_name}</span></div>`;
-        html += `<div class="intake-row"><span class="intake-label">Вид</span><span class="intake-value">${intake.pet_species}</span></div>`;
-        html += `<div class="intake-row"><span class="intake-label">Порода</span><span class="intake-value">${intake.pet_breed || '—'}</span></div>`;
-        html += `<div class="intake-row"><span class="intake-label">Возраст</span><span class="intake-value">${intake.pet_age || '—'}</span></div>`;
+        html += '<div class="intake-row"><span class="intake-label">Кличка</span><span class="intake-value">' + intake.pet_name + '</span></div>';
+        html += '<div class="intake-row"><span class="intake-label">Вид</span><span class="intake-value">' + intake.pet_species + '</span></div>';
+        html += '<div class="intake-row"><span class="intake-label">Порода</span><span class="intake-value">' + (intake.pet_breed || '—') + '</span></div>';
+        html += '<div class="intake-row"><span class="intake-label">Возраст</span><span class="intake-value">' + (intake.pet_age || '—') + '</span></div>';
         html += '</div>';
 
         if (intake.answers && intake.answers.length > 0) {
             html += '<div class="intake-section"><h4>📝 Ответы</h4>';
-            intake.answers.forEach(a => {
-                html += `<div class="intake-row"><span class="intake-label">${a.field_name}</span><span class="intake-value">${a.value || '—'}</span></div>`;
+            intake.answers.forEach(function(a) {
+                html += '<div class="intake-row"><span class="intake-label">' + a.field_name +
+                    '</span><span class="intake-value">' + (a.value || '—') + '</span></div>';
             });
             html += '</div>';
         }
-
         html += '</div>';
 
         document.getElementById('intakeViewBody').innerHTML = html;
+        document.getElementById('btnConvertIntake').style.display =
+            intake.status === 'converted' ? 'none' : 'inline-flex';
 
-        // Show/hide convert button
-        const btnConvert = document.getElementById('btnConvertIntake');
-        if (intake.status === 'converted') {
-            btnConvert.style.display = 'none';
-        } else {
-            btnConvert.style.display = 'inline-flex';
-        }
-
-        // Mark as reviewed
         if (intake.status === 'new') {
-            await fetch(`/api/intake/${id}/status`, {
+            await fetch('/api/intake/' + id + '/status', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'reviewed' })
             });
         }
-
         showModal('intakeViewModal');
-    } catch (e) {
-        showToast('Ошибка загрузки', 'error');
-    }
+    } catch (e) { showToast('Ошибка загрузки', 'error'); }
 }
 
 async function convertIntake() {
     if (!currentIntakeId) return;
     try {
-        const resp = await fetch(`/api/intake/${currentIntakeId}/convert`, { method: 'POST' });
+        var resp = await fetch('/api/intake/' + currentIntakeId + '/convert', { method: 'POST' });
         if (resp.ok) {
-            const data = await resp.json();
-            showToast(`Создан пациент: ${data.pet.name}`);
+            var data = await resp.json();
+            showToast('Создан пациент: ' + data.pet.name);
             closeModal('intakeViewModal');
             loadIntakes();
         } else {
-            const err = await resp.json();
+            var err = await resp.json();
             showToast(err.detail || 'Ошибка', 'error');
         }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
 
 async function deleteIntake(id) {
     if (!confirm('Удалить анкету?')) return;
     try {
-        const resp = await fetch(`/api/intake/${id}`, { method: 'DELETE' });
-        if (resp.ok) {
-            showToast('Анкета удалена');
-            loadIntakes();
-        }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+        var resp = await fetch('/api/intake/' + id, { method: 'DELETE' });
+        if (resp.ok) { showToast('Анкета удалена'); loadIntakes(); }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
-
 // ============ REMINDERS ============
 async function loadReminders() {
     try {
-        const date = document.getElementById('reminderDateFilter').value;
-        const isDone = document.getElementById('reminderDoneFilter').value;
-        let url = '/api/reminders?';
-        if (date) url += `date=${date}&`;
-        if (isDone !== '') url += `is_done=${isDone}&`;
+        var date = document.getElementById('reminderDateFilter').value;
+        var isDone = document.getElementById('reminderDoneFilter').value;
+        var url = '/api/reminders?';
+        if (date) url += 'date=' + date + '&';
+        if (isDone !== '') url += 'is_done=' + isDone + '&';
 
-        const resp = await fetch(url);
-        const reminders = await resp.json();
-        const el = document.getElementById('remindersList');
+        var resp = await fetch(url);
+        var reminders = await resp.json();
+        var el = document.getElementById('remindersList');
 
         if (reminders.length === 0) {
-            el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔔</div><div class="empty-title">Нет напоминаний</div></div>';
+            el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔔</div>' +
+                '<div class="empty-title">Нет напоминаний</div></div>';
             return;
         }
 
-        el.innerHTML = reminders.map(r => `
-            <div class="data-card" style="${r.is_done ? 'opacity:0.6' : ''}">
-                <div class="data-card-info">
-                    <div class="title">
-                        ${r.is_done ? '✅' : '🔔'} ${r.title}
-                        <span class="badge badge-${r.reminder_type}">${reminderTypeLabel(r.reminder_type)}</span>
-                    </div>
-                    <div class="subtitle">${r.description || ''}</div>
-                    <div class="details">${r.remind_date ? formatDate(r.remind_date) : ''}</div>
-                </div>
-                <div class="data-card-actions">
-                    ${!r.is_done ? `<button onclick="event.stopPropagation(); markReminderDone(${r.id})" title="Выполнено">✅</button>` : ''}
-                    <button onclick="event.stopPropagation(); editReminder(${r.id}, '${r.title}', '${(r.description || '').replace(/'/g, "\\'")}', '${r.remind_date || ''}', '${r.reminder_type}')" title="Редактировать">✏️</button>
-                    <button onclick="event.stopPropagation(); deleteReminder(${r.id})" title="Удалить">🗑️</button>
-                </div>
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error(e);
-    }
+        el.innerHTML = reminders.map(function(r) {
+            return '<div class="data-card" style="' + (r.is_done ? 'opacity:0.6' : '') + '">' +
+                '<div class="data-card-info">' +
+                '<div class="title">' + (r.is_done ? '✅' : '🔔') + ' ' + r.title +
+                ' <span class="badge badge-' + r.reminder_type + '">' + reminderTypeLabel(r.reminder_type) + '</span></div>' +
+                '<div class="subtitle">' + (r.description || '') + '</div>' +
+                '<div class="details">' + (r.remind_date ? formatDate(r.remind_date) : '') + '</div>' +
+                '</div><div class="data-card-actions">' +
+                (!r.is_done ? '<button onclick="event.stopPropagation(); markReminderDone(' + r.id + ')" title="Выполнено">✅</button>' : '') +
+                '<button onclick="event.stopPropagation(); editReminder(' + r.id +
+                ',\'' + r.title.replace(/'/g, "\\'") +
+                '\',\'' + (r.description || '').replace(/'/g, "\\'") +
+                '\',\'' + (r.remind_date || '') +
+                '\',\'' + r.reminder_type + '\')" title="Редактировать">✏️</button>' +
+                '<button onclick="event.stopPropagation(); deleteReminder(' + r.id + ')" title="Удалить">🗑️</button>' +
+                '</div></div>';
+        }).join('');
+    } catch (e) { console.error(e); }
 }
 
 function reminderTypeLabel(type) {
-    const map = { custom: 'Своё', follow_up: 'Повторный визит', vaccination: 'Вакцинация' };
+    var map = { custom: 'Своё', follow_up: 'Повторный визит', vaccination: 'Вакцинация' };
     return map[type] || type;
 }
 
 async function saveReminder() {
-    const editId = document.getElementById('reminderEditId').value;
-    const data = {
+    var editId = document.getElementById('reminderEditId').value;
+    var data = {
         title: document.getElementById('reminderTitle').value,
         description: document.getElementById('reminderDesc').value,
         remind_date: document.getElementById('reminderDate').value,
         reminder_type: document.getElementById('reminderType').value
     };
-
     if (!data.title || !data.remind_date) {
         showToast('Заголовок и дата обязательны', 'error');
         return;
     }
-
     try {
-        const url = editId ? `/api/reminders/${editId}` : '/api/reminders';
-        const method = editId ? 'PUT' : 'POST';
-        const resp = await fetch(url, {
-            method,
+        var url = editId ? '/api/reminders/' + editId : '/api/reminders';
+        var method = editId ? 'PUT' : 'POST';
+        var resp = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (resp.ok) {
             showToast(editId ? 'Напоминание обновлено' : 'Напоминание создано');
             closeModal('reminderModal');
             clearReminderForm();
             loadReminders();
         } else {
-            const err = await resp.json();
+            var err = await resp.json();
             showToast(err.detail || 'Ошибка', 'error');
         }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
 
 function editReminder(id, title, desc, date, type) {
@@ -1662,8 +1430,8 @@ function editReminder(id, title, desc, date, type) {
     document.getElementById('reminderDesc').value = desc;
     document.getElementById('reminderType').value = type;
     if (date) {
-        const dt = new Date(date);
-        const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        var dt = new Date(date);
+        var local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
         document.getElementById('reminderDate').value = local;
     }
     document.getElementById('reminderModalTitle').textContent = 'Редактировать напоминание';
@@ -1672,27 +1440,17 @@ function editReminder(id, title, desc, date, type) {
 
 async function markReminderDone(id) {
     try {
-        const resp = await fetch(`/api/reminders/${id}/done`, { method: 'PUT' });
-        if (resp.ok) {
-            showToast('Отмечено как выполнено');
-            loadReminders();
-        }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+        var resp = await fetch('/api/reminders/' + id + '/done', { method: 'PUT' });
+        if (resp.ok) { showToast('Отмечено как выполнено'); loadReminders(); }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
 
 async function deleteReminder(id) {
     if (!confirm('Удалить напоминание?')) return;
     try {
-        const resp = await fetch(`/api/reminders/${id}`, { method: 'DELETE' });
-        if (resp.ok) {
-            showToast('Напоминание удалено');
-            loadReminders();
-        }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+        var resp = await fetch('/api/reminders/' + id, { method: 'DELETE' });
+        if (resp.ok) { showToast('Напоминание удалено'); loadReminders(); }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
 
 function clearReminderForm() {
@@ -1707,9 +1465,9 @@ function clearReminderForm() {
 // ============ SETTINGS ============
 async function loadSettings() {
     try {
-        const resp = await fetch('/api/settings');
+        var resp = await fetch('/api/settings');
         if (!resp.ok) return;
-        const s = await resp.json();
+        var s = await resp.json();
 
         document.getElementById('setClinicName').value = s.clinic_name || '';
         document.getElementById('setClinicAddress').value = s.clinic_address || '';
@@ -1721,17 +1479,14 @@ async function loadSettings() {
         document.getElementById('setDocDoctorContacts').value = s.doc_doctor_contacts || '';
         document.getElementById('setDocFooter').value = s.doc_footer || '';
 
-        // Load doctors list if admin
         if (currentDoctor && currentDoctor.is_admin) {
             loadDoctorsList();
         }
-    } catch (e) {
-        console.error(e);
-    }
+    } catch (e) { console.error(e); }
 }
 
 async function saveSettings() {
-    const data = {
+    var data = {
         clinic_name: document.getElementById('setClinicName').value,
         clinic_address: document.getElementById('setClinicAddress').value,
         clinic_phone: document.getElementById('setClinicPhone').value,
@@ -1742,51 +1497,41 @@ async function saveSettings() {
         doc_doctor_contacts: document.getElementById('setDocDoctorContacts').value,
         doc_footer: document.getElementById('setDocFooter').value
     };
-
     try {
-        const resp = await fetch('/api/settings', {
+        var resp = await fetch('/api/settings', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
-        if (resp.ok) {
-            showToast('Настройки сохранены');
-        } else {
-            showToast('Ошибка сохранения', 'error');
-        }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+        if (resp.ok) { showToast('Настройки сохранены'); }
+        else { showToast('Ошибка сохранения', 'error'); }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
 
 // ============ DOCTORS (admin) ============
 async function loadDoctorsList() {
     try {
-        const resp = await fetch('/api/doctors');
+        var resp = await fetch('/api/doctors');
         if (!resp.ok) return;
-        const doctors = await resp.json();
-        const el = document.getElementById('doctorsList');
+        var doctors = await resp.json();
+        var el = document.getElementById('doctorsList');
 
-        el.innerHTML = doctors.map(d => `
-            <div class="data-card">
-                <div class="data-card-info">
-                    <div class="title">👨‍⚕️ ${d.full_name} ${d.is_admin ? '(Админ)' : ''}</div>
-                    <div class="subtitle">${d.email} • ${d.username}</div>
-                    <div class="details">${d.specialization || ''} ${d.phone ? '• ' + d.phone : ''}</div>
-                </div>
-                <div class="data-card-actions">
-                    ${!d.is_admin ? `<button onclick="toggleDoctorActive(${d.id}, ${!d.is_active})" title="${d.is_active ? 'Деактивировать' : 'Активировать'}">${d.is_active ? '⏸️' : '▶️'}</button>` : ''}
-                </div>
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error(e);
-    }
+        el.innerHTML = doctors.map(function(d) {
+            return '<div class="data-card"><div class="data-card-info">' +
+                '<div class="title">👨‍⚕️ ' + d.full_name + (d.is_admin ? ' (Админ)' : '') + '</div>' +
+                '<div class="subtitle">' + d.email + ' • ' + d.username + '</div>' +
+                '<div class="details">' + (d.specialization || '') + (d.phone ? ' • ' + d.phone : '') + '</div>' +
+                '</div><div class="data-card-actions">' +
+                (!d.is_admin ? '<button onclick="toggleDoctorActive(' + d.id + ',' + !d.is_active +
+                ')" title="' + (d.is_active ? 'Деактивировать' : 'Активировать') + '">' +
+                (d.is_active ? '⏸️' : '▶️') + '</button>' : '') +
+                '</div></div>';
+        }).join('');
+    } catch (e) { console.error(e); }
 }
 
 async function saveDoctor() {
-    const data = {
+    var data = {
         full_name: document.getElementById('newDoctorName').value,
         email: document.getElementById('newDoctorEmail').value,
         username: document.getElementById('newDoctorUsername').value,
@@ -1794,19 +1539,16 @@ async function saveDoctor() {
         phone: document.getElementById('newDoctorPhone').value,
         specialization: document.getElementById('newDoctorSpec').value
     };
-
     if (!data.full_name || !data.email || !data.username || !data.password) {
         showToast('Заполните обязательные поля', 'error');
         return;
     }
-
     try {
-        const resp = await fetch('/api/doctors', {
+        var resp = await fetch('/api/doctors', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (resp.ok) {
             showToast('Врач создан');
             closeModal('doctorModal');
@@ -1818,17 +1560,15 @@ async function saveDoctor() {
             document.getElementById('newDoctorSpec').value = '';
             loadDoctorsList();
         } else {
-            const err = await resp.json();
+            var err = await resp.json();
             showToast(err.detail || 'Ошибка', 'error');
         }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
 
 async function toggleDoctorActive(id, active) {
     try {
-        const resp = await fetch(`/api/doctors/${id}`, {
+        var resp = await fetch('/api/doctors/' + id, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ is_active: active })
@@ -1837,9 +1577,7 @@ async function toggleDoctorActive(id, active) {
             showToast(active ? 'Врач активирован' : 'Врач деактивирован');
             loadDoctorsList();
         }
-    } catch (e) {
-        showToast('Ошибка', 'error');
-    }
+    } catch (e) { showToast('Ошибка', 'error'); }
 }
 
 // ============ VISIT FORM EDITOR ============
@@ -1850,40 +1588,38 @@ function showVisitFormEditor() {
 
 async function loadVisitFormConfig() {
     try {
-        const resp = await fetch('/api/visit-forms');
-        const configs = await resp.json();
-        const config = configs[0];
+        var resp = await fetch('/api/visit-forms');
+        var configs = await resp.json();
+        var config = configs[0];
 
         if (config && config.fields) {
-            const container = document.getElementById('visitFormFields');
-            container.innerHTML = config.fields.map((f, i) => createVisitFormFieldRow(f, i)).join('');
+            var container = document.getElementById('visitFormFields');
+            container.innerHTML = config.fields.map(function(f, i) {
+                return createVisitFormFieldRow(f, i);
+            }).join('');
         }
-    } catch (e) {
-        console.error(e);
-    }
+    } catch (e) { console.error(e); }
 }
 
 function createVisitFormFieldRow(field, index) {
-    return `
-        <div class="vf-field-row" data-index="${index}">
-            <input type="text" class="vf-name" value="${field.field_name || ''}" placeholder="Имя поля">
-            <input type="text" class="vf-label" value="${field.field_label || ''}" placeholder="Подпись">
-            <select class="vf-type">
-                <option value="textarea" ${field.field_type === 'textarea' ? 'selected' : ''}>Текст</option>
-                <option value="number" ${field.field_type === 'number' ? 'selected' : ''}>Число</option>
-                <option value="text" ${field.field_type === 'text' ? 'selected' : ''}>Строка</option>
-            </select>
-            <label><input type="checkbox" class="vf-visible" ${field.is_visible ? 'checked' : ''}> Видимое</label>
-            <label><input type="checkbox" class="vf-required" ${field.is_required ? 'checked' : ''}> Обяз.</label>
-            <button class="vf-field-remove" onclick="this.parentElement.remove()">✕</button>
-        </div>
-    `;
+    return '<div class="vf-field-row" data-index="' + index + '">' +
+        '<input type="text" class="vf-name" value="' + (field.field_name || '') + '" placeholder="Имя поля">' +
+        '<input type="text" class="vf-label" value="' + (field.field_label || '') + '" placeholder="Подпись">' +
+        '<select class="vf-type">' +
+        '<option value="textarea"' + (field.field_type === 'textarea' ? ' selected' : '') + '>Текст</option>' +
+        '<option value="number"' + (field.field_type === 'number' ? ' selected' : '') + '>Число</option>' +
+        '<option value="text"' + (field.field_type === 'text' ? ' selected' : '') + '>Строка</option>' +
+        '</select>' +
+        '<label><input type="checkbox" class="vf-visible"' + (field.is_visible ? ' checked' : '') + '> Видимое</label>' +
+        '<label><input type="checkbox" class="vf-required"' + (field.is_required ? ' checked' : '') + '> Обяз.</label>' +
+        '<button class="vf-field-remove" onclick="this.parentElement.remove()">✕</button>' +
+        '</div>';
 }
 
 function addVisitFormField() {
-    const container = document.getElementById('visitFormFields');
-    const index = container.children.length;
-    const html = createVisitFormFieldRow({
+    var container = document.getElementById('visitFormFields');
+    var index = container.children.length;
+    var html = createVisitFormFieldRow({
         field_name: '',
         field_label: '',
         field_type: 'textarea',
@@ -1894,8 +1630,8 @@ function addVisitFormField() {
 }
 
 async function saveVisitForm() {
-    const fields = [];
-    document.querySelectorAll('#visitFormFields .vf-field-row').forEach((row, i) => {
+    var fields = [];
+    document.querySelectorAll('#visitFormFields .vf-field-row').forEach(function(row, i) {
         fields.push({
             field_name: row.querySelector('.vf-name').value,
             field_label: row.querySelector('.vf-label').value,
@@ -1907,32 +1643,28 @@ async function saveVisitForm() {
     });
 
     try {
-        // Get existing config or create new
-        const listResp = await fetch('/api/visit-forms');
-        const configs = await listResp.json();
+        var listResp = await fetch('/api/visit-forms');
+        var configs = await listResp.json();
 
-        let url, method;
+        var url, method;
         if (configs.length > 0) {
-            url = `/api/visit-forms/${configs[0].id}`;
+            url = '/api/visit-forms/' + configs[0].id;
             method = 'PUT';
         } else {
             url = '/api/visit-forms';
             method = 'POST';
         }
 
-        const resp = await fetch(url, {
-            method,
+        var resp = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'Стандартная форма', fields })
+            body: JSON.stringify({ name: 'Стандартная форма', fields: fields })
         });
-
         if (resp.ok) {
             showToast('Форма приёма сохранена');
             closeModal('visitFormEditorModal');
         } else {
             showToast('Ошибка сохранения', 'error');
         }
-    } catch (e) {
-        showToast('Ошибка сети', 'error');
-    }
+    } catch (e) { showToast('Ошибка сети', 'error'); }
 }
