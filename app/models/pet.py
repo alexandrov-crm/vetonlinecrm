@@ -17,6 +17,10 @@ class Pet(Base):
     sex = Column(String, nullable=True)
     chip_number = Column(String, nullable=True)
     notes = Column(String, nullable=True)
+
+    # Подписка до (если NULL — подписки нет)
+    subscription_until = Column(DateTime, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
