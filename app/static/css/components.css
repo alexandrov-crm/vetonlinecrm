@@ -418,3 +418,43 @@ body.dark-theme .intake-detail .intake-row .intake-label {
         margin-bottom: 2px;
     }
 }
+/* ============ SUBSCRIPTION BADGES ============ */
+.badge-sub-active {
+    background: #d4edda;
+    color: #155724;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.badge-sub-expiring {
+    background: #fff3cd;
+    color: #856404;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.badge-sub-expired {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.badge-sub-none {
+    background: #e2e3e5;
+    color: #383d41;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.pet-subscription {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
