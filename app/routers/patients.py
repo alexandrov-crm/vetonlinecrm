@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
+from datetime import datetime, timedelta
+
 from app.database import get_session
 from app.models.doctor import Doctor
 from app.models.owner import Owner
@@ -49,7 +51,8 @@ async def get_owners(
             "name": p.name,
             "species": p.species,
             "breed": p.breed,
-            "age": p.age
+            "age": p.age,
+            "subscription_until": p.subscription_until.isoformat() if getattr(p, "subscription_until", None) else None
         } for p in o.pets]
     } for o in owners]
 
@@ -173,6 +176,7 @@ async def get_pets(
         "sex": p.sex,
         "chip_number": p.chip_number,
         "notes": p.notes,
+        "subscription_until": p.subscription_until.isoformat() if getattr(p, "subscription_until", None) else None,
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "owner": {
             "id": p.owner.id,
@@ -214,6 +218,7 @@ async def get_pet(
         "sex": pet.sex,
         "chip_number": pet.chip_number,
         "notes": pet.notes,
+        "subscription_until": pet.subscription_until.isoformat() if getattr(pet, "subscription_until", None) else None,
         "created_at": pet.created_at.isoformat() if pet.created_at else None,
         "owner": {
             "id": pet.owner.id,
@@ -277,7 +282,8 @@ async def create_pet(
         weight=data.get("weight"),
         sex=data.get("sex", ""),
         chip_number=data.get("chip_number", ""),
-        notes=data.get("notes", "")
+        notes=data.get("notes", ""),
+        subscription_until=None
     )
     session.add(pet)
     await session.flush()
@@ -328,6 +334,18 @@ async def update_pet(
     if "notes" in data:
         pet.notes = data["notes"]
 
+    # (опционально) дать возможность руками поставить subscription_until из админки/формы
+    if "subscription_until" in data:
+        # ожидаем ISO-строку или пусто/null
+        val = data["subscription_until"]
+        if not val:
+            pet.subscription_until = None
+        else:
+            try:
+                pet.subscription_until = datetime.fromisoformat(val.replace("Z", "+00:00"))
+            except Exception:
+                raise HTTPException(status_code=400, detail="subscription_until должен быть ISO-датой")
+
     return {"message": "Питомец обновлён"}
 
 
@@ -349,6 +367,54 @@ async def delete_pet(
 
     await session.delete(pet)
     return {"message": "Питомец удалён"}
+
+
+# ============ ПОДПИСКА (продление) ============
+
+@router.post("/pets/{pet_id}/subscription")
+async def extend_pet_subscription(
+    pet_id: int,
+    request: Request,
+    doctor: Doctor = Depends(get_current_doctor),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Продлить подписку.
+
+    body:
+      { "months": 1 }  или { "days": 30 }
+
+    months считаем как 30 дней (простая модель).
+    """
+    data = await request.json()
+    months = int(data.get("months") or 0)
+    days = int(data.get("days") or 0)
+
+    if months <= 0 and days <= 0:
+        raise HTTPException(status_code=400, detail="Передайте months или days > 0")
+
+    result = await session.execute(
+        select(Pet).join(Owner).where(
+            Pet.id == pet_id,
+            Owner.doctor_id == doctor.id
+        )
+    )
+    pet = result.scalar_one_or_none()
+    if not pet:
+        raise HTTPException(status_code=404, detail="Питомец не найден")
+
+    now = datetime.utcnow()
+    base = pet.subscription_until or now
+    if base < now:
+        base = now
+
+    delta_days = days + months * 30
+    pet.subscription_until = base + timedelta(days=delta_days)
+
+    return {
+        "message": "Подписка продлена",
+        "subscription_until": pet.subscription_until.isoformat()
+    }
 
 
 # ============ ГЛОБАЛЬНЫЙ ПОИСК ============
