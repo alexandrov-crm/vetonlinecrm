@@ -170,6 +170,50 @@ function openOwnerPets(ownerId) {
     document.getElementById('globalSearch').value = '';
     navigate('patients');
 }
+// ============ SUBSCRIPTION HELPERS ============
+function getSubscriptionBadge(subscriptionUntil) {
+    if (!subscriptionUntil) {
+        return '<span class="badge badge-sub-none">Нет подписки</span>';
+    }
+    var subDate = new Date(subscriptionUntil);
+    var now = new Date();
+    var daysLeft = Math.ceil((subDate - now) / (1000 * 60 * 60 * 24));
+    if (daysLeft <= 0) {
+        return '<span class="badge badge-sub-expired">Подписка истекла</span>';
+    } else if (daysLeft <= 7) {
+        return '<span class="badge badge-sub-expiring">Подписка: ' + daysLeft + ' дн.</span>';
+    } else {
+        var dateStr = subDate.toLocaleDateString('ru-RU');
+        return '<span class="badge badge-sub-active">Подписка до ' + dateStr + '</span>';
+    }
+}
+
+async function extendSubscription(petId, months) {
+    try {
+        var resp = await fetch('/api/patients/pets/' + petId + '/subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ months: months })
+        });
+        if (resp.ok) {
+            var data = await resp.json();
+            showToast('Подписка продлена до ' + new Date(data.subscription_until).toLocaleDateString('ru-RU'));
+            openPetCard(petId);
+        } else {
+            var err = await resp.json();
+            showToast(err.detail || 'Ошибка продления', 'error');
+        }
+    } catch (e) {
+        showToast('Ошибка сети', 'error');
+    }
+}
+
+function showExtendDialog(petId) {
+    var months = prompt('На сколько месяцев продлить подписку?', '1');
+    if (months && parseInt(months) > 0) {
+        extendSubscription(petId, parseInt(months));
+    }
+}
 
 // ============ DASHBOARD ============
 // >>> ПУНКТ 8: убраны владельцы/питомцы, ближайшие приёмы только сегодня
@@ -343,7 +387,7 @@ async function loadPets(search = '') {
         el.innerHTML = pets.map(p => `
             <div class="data-card" onclick="openPetCard(${p.id})">
                 <div class="data-card-info">
-                    <div class="title">${p.species === 'Кошка' ? '🐱' : '🐶'} ${p.name}</div>
+                    <div class="title">${p.species === 'Кошка' ? '🐱' : '🐶'} ${p.name} ${getSubscriptionBadge(p.subscription_until)}</div>
                     <div class="subtitle">${p.species} ${p.breed ? '• ' + p.breed : ''} ${p.age ? '• ' + p.age : ''}</div>
                     <div class="details">Владелец: ${p.owner.full_name} ${p.owner.phone ? '• ' + p.owner.phone : ''}</div>
                 </div>
@@ -519,9 +563,13 @@ async function openPetCard(petId) {
 
         document.getElementById('petCardTitle').textContent = pet.name + ' — карточка';
         document.getElementById('petCardInfo').innerHTML = `
-            <div class="pet-name">${pet.species === 'Кошка' ? '🐱' : '🐶'} ${pet.name}</div>
-            <div class="pet-species">${pet.species} ${pet.breed ? '• ' + pet.breed : ''}</div>
-            <div class="info-row"><span class="label">Возраст</span><span class="value">${pet.age || '—'}</span></div>
+    <div class="pet-name">${pet.species === 'Кошка' ? '🐱' : '🐶'} ${pet.name}</div>
+    <div class="pet-species">${pet.species} ${pet.breed ? '• ' + pet.breed : ''}</div>
+    <div class="pet-subscription" style="margin:10px 0">
+        ${getSubscriptionBadge(pet.subscription_until)}
+        <button class="btn btn-sm" style="margin-left:10px" onclick="showExtendDialog(${pet.id})">📅 Продлить</button>
+    </div>
+    <div class="info-row"><span class="label">Возраст</span><span class="value">${pet.age || '—'}</span></div>
             <div class="info-row"><span class="label">Вес</span><span class="value">${pet.weight ? pet.weight + ' кг' : '—'}</span></div>
             <div class="info-row"><span class="label">Пол</span><span class="value">${pet.sex || '—'}</span></div>
             <div class="info-row"><span class="label">Чип</span><span class="value">${pet.chip_number || '—'}</span></div>
