@@ -10,17 +10,14 @@ class Pet(Base):
     id = Column(Integer, primary_key=True, index=True)
     owner_id = Column(Integer, ForeignKey("owners.id"), nullable=False)
     name = Column(String, nullable=False)
-    species = Column(String, nullable=False)  # кошка / собака
+    species = Column(String, nullable=False)
     breed = Column(String, nullable=True)
     age = Column(String, nullable=True)
     weight = Column(Float, nullable=True)
     sex = Column(String, nullable=True)
     chip_number = Column(String, nullable=True)
     notes = Column(String, nullable=True)
-
-    # Подписка до (если NULL — подписки нет)
     subscription_until = Column(DateTime, nullable=True)
-
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
