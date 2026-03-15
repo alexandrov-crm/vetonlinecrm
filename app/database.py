@@ -54,6 +54,15 @@ async def migrate_db():
         except Exception as e:
             print(f"⚠️ username: {e}")
 
+        # NEW: Добавляем subscription_until в pets если нет
+        try:
+            await conn.execute(text(
+                "ALTER TABLE pets ADD COLUMN IF NOT EXISTS subscription_until TIMESTAMP NULL"
+            ))
+            print("✅ Колонка subscription_until добавлена")
+        except Exception as e:
+            print(f"⚠️ subscription_until: {e}")
+
 
 async def init_db():
     async with engine.begin() as conn:
